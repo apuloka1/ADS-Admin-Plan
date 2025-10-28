@@ -1,0 +1,1813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Admin Operations Plan</title>
+    <!-- Chosen Palette: Warm Neutrals, Accent: Teal -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Custom transitions and states for navigation and buttons */
+        .nav-link {
+            transition: color 0.2s, border-bottom-color 0.2s;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #0d9488; /* accent-dark */
+            border-bottom-color: #0d9488;
+        }
+        .team-btn {
+            transition: background-color 0.2s, color 0.2s;
+        }
+        .team-btn.active {
+            background-color: #0d9488; /* accent-dark */
+            color: #ffffff;
+        }
+        .team-btn:not(.active) {
+            background-color: #f1f5f9; /* gray-100 */
+            color: #334155; /* neutral-text */
+        }
+        .role-tab {
+            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+        }
+        .role-tab.active {
+            background-color: #f0fdfa; /* accent-light */
+            color: #0d9488;
+            border-color: #0d9488;
+        }
+        .role-tab:not(.active) {
+            background-color: #ffffff;
+            color: #475569; /* neutral-subtle */
+            border-color: #e2e8f0; /* gray-200 */
+        }
+        /* Table Sorting and Filtering */
+        .sortable-header {
+            cursor: pointer;
+            transition: color 0.15s;
+            position: relative;
+        }
+        .sortable-header:hover {
+            color: #0d9488;
+        }
+        .sort-icon {
+            margin-left: 0.5rem;
+            opacity: 0.3;
+            transition: opacity 0.15s;
+        }
+        .sortable-header:hover .sort-icon {
+            opacity: 0.7;
+        }
+        .sortable-header.sorted .sort-icon {
+            opacity: 1;
+        }
+        /* Filter Menu Dropdown */
+        .filter-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            z-index: 10;
+            background-color: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.375rem; /* rounded-md */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+            padding: 0.5rem;
+            min-width: 150px;
+        }
+        .filter-option {
+            padding: 0.5rem 0.75rem;
+            cursor: pointer;
+            border-radius: 0.25rem;
+        }
+        .filter-option:hover {
+            background-color: #f1f5f9;
+        }
+        .filter-option.active {
+            background-color: #f0fdfa;
+            color: #0d9488;
+            font-weight: 600;
+        }
+        /* Tooltip styles */
+        .has-tooltip {
+            position: relative;
+        }
+        .tooltip {
+            position: absolute;
+            z-index: 20;
+            top: -10px;
+            left: 50%;
+            transform: translate(-50%, -100%);
+            padding: 4px 8px;
+            background-color: #334155; 
+            color: white;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            white-space: nowrap;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.2s;
+        }
+        .has-tooltip:hover .tooltip {
+            opacity: 1;
+        }
+
+        /* Editable content style */
+        [contenteditable="true"] {
+            min-width: 50px;
+            cursor: text;
+        }
+        [contenteditable="true"]:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px #f0fdfa, 0 0 0 4px #0d9488; /* accent-light and accent-dark */
+            border-radius: 4px;
+        }
+        .save-btn-container {
+            min-height: 40px; /* Ensure layout doesn't jump when the button appears/disappears */
+        }
+        /* Style for the select dropdown in the roster table */
+        .schedule-select {
+            padding: 0.25rem;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            background-color: #fff;
+            border: 1px solid #e5e7eb;
+            appearance: none; /* Hide default dropdown arrow */
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3e%3cpath d='M6 8l4 4 4-4' stroke='%234b5563' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 1.5em;
+            cursor: pointer;
+        }
+        .undo-btn:disabled, .redo-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-light': '#fefce8',
+                        'brand-base': '#fde047',
+                        'brand-dark': '#eab308',
+                        'accent-light': '#f0fdfa',
+                        'accent-base': '#14b8a6',
+                        'accent-dark': '#0d9488',
+                        'neutral-base': '#fafaf9',
+                        'neutral-text': '#334155',
+                        'neutral-subtle': '#64748b',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-neutral-base text-neutral-text font-sans antialiased">
+
+    <!-- Sticky Navigation Header -->
+    <header class="sticky top-0 z-50 w-full bg-white shadow-md">
+        <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex-shrink-0 flex items-center">
+                    <h1 class="text-xl font-bold text-accent-dark">Admin Operations Plan</h1>
+                </div>
+                <div class="hidden sm:flex sm:ml-6 items-center">
+                    <div class="flex space-x-4">
+                        <a href="#overview" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-neutral-subtle border-b-2 border-transparent" data-target="overview">Overview</a>
+                        <a href="#goals" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-neutral-subtle border-b-2 border-transparent" data-target="goals">Strategic Goals</a>
+                        <a href="#coverage" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-neutral-subtle border-b-2 border-transparent" data-target="coverage">Team Coverage</a>
+                        <a href="#roles" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-neutral-subtle border-b-2 border-transparent" data-target="roles">Team Functions</a>
+                        <a href="#training" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-neutral-subtle border-b-2 border-transparent" data-target="training">Training</a>
+                    </div>
+                    <!-- Undo/Redo Controls -->
+                    <div class="ml-4 flex space-x-2 border-l pl-4">
+                        <button id="undoBtn" onclick="undoState()" class="undo-btn text-neutral-subtle hover:text-accent-dark p-2 rounded disabled:opacity-50 disabled:cursor-not-allowed has-tooltip" disabled>
+                            &#8630; <!-- Unicode Undo Arrow -->
+                            <span class="tooltip">Undo (Ctrl+Z)</span>
+                        </button>
+                        <button id="redoBtn" onclick="redoState()" class="redo-btn text-neutral-subtle hover:text-accent-dark p-2 rounded disabled:opacity-50 disabled:cursor-not-allowed has-tooltip" disabled>
+                            &#8631; <!-- Unicode Redo Arrow -->
+                            <span class="tooltip">Redo (Ctrl+Y)</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+        
+        <!-- Section 1: Overview -->
+        <section id="overview" class="mb-16 scroll-mt-20">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-3xl font-bold text-neutral-text">Overview</h2>
+                <div class="save-btn-container">
+                    <button id="saveOverviewBtn" onclick="saveAllEditableContent(this)" class="bg-accent-dark hover:bg-accent-base text-white font-semibold py-1.5 px-3 rounded-md shadow-md transition duration-150 ease-in-out text-sm hidden">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+            <p class="text-lg text-neutral-subtle mb-8" id="overviewDescription" contenteditable="true" data-persist-key="overviewDescription">
+                The ADS administrative team provides comprehensive support to division leadership, Care Coordination Program, and cross-functional operations. The team ensures that day-to-day workflows, financial processing, and data integrity are maintained to support the delivery of essential services to over 15,000 clients and 300 staff members across ADS. This plan defines the administrative structure, primary responsibilities by classification, and ongoing operational objectives.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Content Removed for Brevity as per Report Spec -->
+            </div>
+        </section>
+
+        <!-- Section 2: Strategic Goals -->
+        <section id="goals" class="mb-16 scroll-mt-20">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-3xl font-bold text-neutral-text">Strategic Goals</h2>
+                <div class="save-btn-container">
+                    <button id="saveGoalsBtn" onclick="saveAllEditableContent(this)" class="bg-accent-dark hover:bg-accent-base text-white font-semibold py-1.5 px-3 rounded-md shadow-md transition duration-150 ease-in-out text-sm hidden">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+            <p class="text-lg text-neutral-subtle mb-8" id="goalsIntroduction" contenteditable="true" data-persist-key="goalsIntroduction">
+                These goals define the high-level objectives for the administrative team, focusing on process improvement, communication, and capacity building.
+            </p>
+            <div class="bg-white p-8 rounded-lg shadow-sm border border-gray-200">
+                <ol id="strategicGoalsList" class="space-y-6 list-none p-0">
+                    <li class="flex items-start" data-goal-id="1">
+                        <span class="text-xl font-bold text-accent-dark mr-3 mt-1">1.</span>
+                        <div>
+                            <h4 class="font-semibold text-neutral-text" contenteditable="true" data-goal-key="title">Build Staff Capacity:</h4>
+                            <p class="text-neutral-subtle" contenteditable="true" data-goal-key="description">Provide cross-training between Admin Spec I and Admin Spec II roles to ensure consistent coverage of all tasks and team functions.</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start" data-goal-id="2">
+                        <span class="text-xl font-bold text-accent-dark mr-3 mt-1">2.</span>
+                        <div>
+                            <h4 class="font-semibold text-neutral-text" contenteditable="true" data-goal-key="title">Standardize Processes:</h4>
+                            <p class="text-neutral-subtle" contenteditable="true" data-goal-key="description">Develop and maintain SOPs and training documents for all team functions.</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start" data-goal-id="3">
+                        <span class="text-xl font-bold text-accent-dark mr-3 mt-1">3.</span>
+                        <div>
+                            <h4 class="font-semibold text-neutral-text" contenteditable="true" data-goal-key="title">Expand Division-Wide Administrative Support:</h4>
+                            <p class="text-neutral-subtle" contenteditable="true" data-goal-key="description">Deliver comprehensive support to division leadership, contracts, and planning units by proactively aligning administrative resources, streamlining coordination with program managers, and enhancing service delivery across all core functions</p>
+                        </div>
+                    </li>
+                    <li class="flex items-start" data-goal-id="4">
+                        <span class="text-xl font-bold text-accent-dark mr-3 mt-1">4.</span>
+                        <div>
+                            <h4 class="font-semibold text-neutral-text" contenteditable="true" data-goal-key="title">Align Roles and Support Levels:</h4>
+                            <p class="text-neutral-subtle" contenteditable="true" data-goal-key="description">Collaborate with division leadership to assess, realign, and clarify administrative responsibilities, ensuring all staff work within the scope of their roles. Adjust support assignments as needed based on changing program and leadership priorities, so resources are matched to operational and strategic needs.</p>
+                        </div>
+                    </li>
+                </ol>
+            </div>
+        </section>
+        
+        <!-- Section 3: Team Coverage Dashboard (Roster Table) -->
+        <section id="coverage" class="mb-16 scroll-mt-20">
+            <h2 class="text-3xl font-bold text-neutral-text mb-4">Weekly Coverage Dashboard</h2>
+            <p class="text-lg text-neutral-subtle mb-8">
+                Explore the weekly staffing plan for each administrative team. Use the team buttons to view the roster. Click on any column header (**Staff**, **Position**, **Day**) to sort the table, or use the **filter icon** (`▼`) on the columns to filter by status or staff. **You can now edit staff names and positions, and update day schedules using the dropdowns.**
+            </p>
+            <div class="mb-6 flex flex-col sm:flex-row justify-center sm:justify-between items-center space-y-4 sm:space-y-0 sm:space-x-4">
+                <div class="flex space-x-2">
+                    <button id="btn-seattle" class="team-btn font-semibold py-2 px-6 rounded-full text-sm active has-tooltip" data-team="seattle">
+                        Seattle Team
+                        <span class="tooltip">Show Seattle Roster</span>
+                    </button>
+                    <button id="btn-skc" class="team-btn font-semibold py-2 px-6 rounded-full text-sm has-tooltip" data-team="skc">
+                        SKC Team
+                        <span class="tooltip">Show SKC Roster</span>
+                    </button>
+                </div>
+                <div class="save-btn-container">
+                    <!-- Note: Save button for Coverage is removed as data is part of the overall save model -->
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 gap-8 items-start">
+                <div class="bg-white rounded-lg shadow-sm border border-gray-200 w-full">
+                    <div class="flex flex-col sm:flex-row justify-between items-center p-6 pb-4 border-b border-gray-100">
+                        <h3 id="rosterTitle" class="text-xl font-semibold text-neutral-text mb-4 sm:mb-0">Seattle Admin Team Roster</h3>
+                        <div class="flex space-x-3 w-full sm:w-auto">
+                            <!-- Position Filter (Hidden but available via column filter) -->
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto max-h-[410px]">
+                        <table class="min-w-full divide-y divide-gray-200">
+                            <thead class="bg-gray-50 sticky top-0">
+                                <tr>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-subtle uppercase tracking-wider sortable-header staff-header has-tooltip" data-sort-key="staff" data-sort-dir="none">
+                                        <div class="flex items-center justify-between">
+                                            Staff
+                                            <span class="tooltip">Click to Sort Staff</span>
+                                            <span class="flex items-center space-x-1">
+                                                <span class="sort-icon"></span>
+                                                <button class="filter-btn text-neutral-subtle hover:text-accent-dark relative" data-column="staff">
+                                                    &#9660; <!-- Unicode triangle for filter -->
+                                                    <div class="filter-menu hidden" data-column-menu="staff">
+                                                        <div class="filter-option" data-filter-value="All">Show All</div>
+                                                        <!-- Staff options populated by JS -->
+                                                    </div>
+                                                </button>
+                                            </span>
+                                        </div>
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-subtle uppercase tracking-wider position-header has-tooltip" data-sort-key="pos" data-sort-dir="none">
+                                        <div class="flex items-center justify-between">
+                                            Position
+                                            <span class="tooltip">Click to Sort Position</span>
+                                            <span class="flex items-center space-x-1">
+                                                <span class="sort-icon"></span>
+                                                <button class="filter-btn text-neutral-subtle hover:text-accent-dark relative" data-column="pos">
+                                                    &#9660;
+                                                    <div class="filter-menu hidden" data-column-menu="pos">
+                                                        <div class="filter-option" data-filter-value="All">Show All</div>
+                                                        <!-- Position options populated by JS -->
+                                                    </div>
+                                                </button>
+                                            </span>
+                                        </div>
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-subtle uppercase tracking-wider day-header has-tooltip" data-sort-key="Mon" data-sort-dir="none">
+                                        <div class="flex items-center justify-between">
+                                            Mon
+                                            <span class="tooltip">Click to Filter Day Status</span>
+                                            <span class="flex items-center space-x-1">
+                                                <span class="sort-icon"></span>
+                                                <button class="filter-btn text-neutral-subtle hover:text-accent-dark relative" data-day="Mon" data-column="Mon">
+                                                    &#9660; <!-- Unicode triangle for filter -->
+                                                    <div class="filter-menu hidden" data-column-menu="Mon">
+                                                        <div class="filter-option" data-filter-value="All">Show All</div>
+                                                        <div class="filter-option" data-filter-value="In Office">In Office</div>
+                                                        <div class="filter-option" data-filter-value="Telework">Telework</div>
+                                                    </div>
+                                                </button>
+                                            </span>
+                                        </div>
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-subtle uppercase tracking-wider day-header has-tooltip" data-sort-key="Tue" data-sort-dir="none">
+                                        <div class="flex items-center justify-between">
+                                            Tue
+                                            <span class="tooltip">Click to Filter Day Status</span>
+                                            <span class="flex items-center space-x-1">
+                                                <span class="sort-icon"></span>
+                                                <button class="filter-btn text-neutral-subtle hover:text-accent-dark relative" data-day="Tue" data-column="Tue">
+                                                    &#9660;
+                                                    <div class="filter-menu hidden" data-column-menu="Tue">
+                                                        <div class="filter-option" data-filter-value="All">Show All</div>
+                                                        <div class="filter-option" data-filter-value="In Office">In Office</div>
+                                                        <div class="filter-option" data-filter-value="Telework">Telework</div>
+                                                    </div>
+                                                </button>
+                                            </span>
+                                        </div>
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-subtle uppercase tracking-wider day-header has-tooltip" data-sort-key="Wed" data-sort-dir="none">
+                                        <div class="flex items-center justify-between">
+                                            Wed
+                                            <span class="tooltip">Click to Filter Day Status</span>
+                                            <span class="flex items-center space-x-1">
+                                                <span class="sort-icon"></span>
+                                                <button class="filter-btn text-neutral-subtle hover:text-accent-dark relative" data-day="Wed" data-column="Wed">
+                                                    &#9660;
+                                                    <div class="filter-menu hidden" data-column-menu="Wed">
+                                                        <div class="filter-option" data-filter-value="All">Show All</div>
+                                                        <div class="filter-option" data-filter-value="In Office">In Office</div>
+                                                        <div class="filter-option" data-filter-value="Telework">Telework</div>
+                                                    </div>
+                                                </button>
+                                            </span>
+                                        </div>
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-subtle uppercase tracking-wider day-header has-tooltip" data-sort-key="Thu" data-sort-dir="none">
+                                        <div class="flex items-center justify-between">
+                                            Thu
+                                            <span class="tooltip">Click to Filter Day Status</span>
+                                            <span class="flex items-center space-x-1">
+                                                <span class="sort-icon"></span>
+                                                <button class="filter-btn text-neutral-subtle hover:text-accent-dark relative" data-day="Thu" data-column="Thu">
+                                                    &#9660;
+                                                    <div class="filter-menu hidden" data-column-menu="Thu">
+                                                        <div class="filter-option" data-filter-value="All">Show All</div>
+                                                        <div class="filter-option" data-filter-value="In Office">In Office</div>
+                                                        <div class="filter-option" data-filter-value="Telework">Telework</div>
+                                                    </div>
+                                                </button>
+                                            </span>
+                                        </div>
+                                    </th>
+                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-subtle uppercase tracking-wider day-header has-tooltip" data-sort-key="Fri" data-sort-dir="none">
+                                        <div class="flex items-center justify-between">
+                                            Fri
+                                            <span class="tooltip">Click to Filter Day Status</span>
+                                            <span class="flex items-center space-x-1">
+                                                <span class="sort-icon"></span>
+                                                <button class="filter-btn text-neutral-subtle hover:text-accent-dark relative" data-day="Fri" data-column="Fri">
+                                                    &#9660;
+                                                    <div class="filter-menu hidden" data-column-menu="Fri">
+                                                        <div class="filter-option" data-filter-value="All">Show All</div>
+                                                        <div class="filter-option" data-filter-value="In Office">In Office</div>
+                                                        <div class="filter-option" data-filter-value="Telework">Telework</div>
+                                                    </div>
+                                                </button>
+                                            </span>
+                                        </div>
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="rosterTableBody" class="bg-white divide-y divide-gray-200">
+                            </tbody >
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Section 4: Team Functions (Role Explorer) -->
+        <section id="roles" class="mb-16 scroll-mt-20">
+            <div class="flex justify-between items-center mb-4">
+                 <h2 class="text-3xl font-bold text-neutral-text">Team Functions</h2>
+                <div class="save-btn-container">
+                    <button id="saveRolesBtn" onclick="saveAllEditableContent(this)" class="bg-accent-dark hover:bg-accent-base text-white font-semibold py-1.5 px-3 rounded-md shadow-md transition duration-150 ease-in-out text-sm hidden">
+                        Save Changes
+                    </button>
+                </div>
+            </div>
+            <p class="text-lg text-neutral-subtle mb-8">
+                Discover the specific responsibilities for each administrative role. The original plan's matrix is broken down here for clarity. Click a role below to see a detailed list of their assigned functions and tasks.
+            </p>
+            <div class="flex flex-wrap gap-3 mb-6" id="roleTabs">
+            </div>
+            <div id="roleContent" class="bg-white p-6 rounded-lg shadow-sm border border-gray-200 min-h-[300px]">
+            </div>
+        </section>
+
+        <!-- Section 5: Training & Development (Editable Table) -->
+        <section id="training" class="mb-16 scroll-mt-20">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-3xl font-bold text-neutral-text">Training & Development</h2>
+                <div class="save-btn-container flex space-x-3">
+                    <button id="addTrainingBtn" class="bg-gray-500 hover:bg-gray-600 text-white font-semibold py-1.5 px-3 rounded-md shadow-md transition duration-150 ease-in-out text-sm has-tooltip">
+                        Add New Item
+                        <span class="tooltip">Add a blank, editable row</span>
+                    </button>
+                    <button id="saveTrainingBtn" onclick="saveAllEditableContent(this)" class="bg-accent-dark hover:bg-accent-base text-white font-semibold py-1.5 px-3 rounded-md shadow-md transition duration-150 ease-in-out text-sm hidden">
+                        Save Changes
+                        <span class="tooltip">Save edits to browser storage</span>
+                    </button>
+                </div>
+            </div>
+            <p class="text-lg text-neutral-subtle mb-8">
+                This section outlines the "Skill-Building Toolkit" designed to foster operational continuity and cross-training. The table below details all necessary training topics, their descriptions, assigned training contacts, and target completion dates. **You can edit any cell and click "Save Changes" to store the updates locally.**
+            </p>
+            
+            <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-subtle uppercase tracking-wider w-1/5 training-sortable-header" data-sort-key="skill">
+                                <div class="flex items-center justify-between">
+                                    Function
+                                    <button class="filter-btn text-neutral-subtle hover:text-accent-dark relative" data-column="skill">
+                                        &#9660;
+                                        <div class="filter-menu hidden" data-column-menu="skill">
+                                            <div class="filter-option" data-filter-value="All">Show All</div>
+                                            <!-- Skill options populated by JS -->
+                                        </div>
+                                    </button>
+                                </div>
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-neutral-subtle uppercase tracking-wider w-2/5">Description / Topics</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-subtle uppercase tracking-wider w-1/5 training-sortable-header" data-sort-key="contact">
+                                <div class="flex items-center justify-between">
+                                    Training Contact
+                                    <button class="filter-btn text-neutral-subtle hover:text-accent-dark relative" data-column="contact">
+                                        &#9660;
+                                        <div class="filter-menu hidden" data-column-menu="contact">
+                                            <div class="filter-option" data-filter-value="All">Show All</div>
+                                            <!-- Contact options populated by JS -->
+                                        </div>
+                                    </button>
+                                </div>
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-subtle uppercase tracking-wider w-1/6 training-sortable-header" data-sort-key="date">
+                                <div class="flex items-center justify-between">
+                                    Objective Date
+                                    <button class="filter-btn text-neutral-subtle hover:text-accent-dark relative" data-column="date">
+                                        &#9660;
+                                        <div class="filter-menu hidden" data-column-menu="date">
+                                            <div class="filter-option" data-filter-value="All">Show All</div>
+                                            <!-- Date options populated by JS -->
+                                        </div>
+                                    </button>
+                                </div>
+                            </th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-neutral-subtle uppercase tracking-wider w-1/6 training-sortable-header" data-sort-key="resources">
+                                <div class="flex items-center justify-between">
+                                    Resources
+                                    <button class="filter-btn text-neutral-subtle hover:text-accent-dark relative" data-column="resources">
+                                        &#9660;
+                                        <div class="filter-menu hidden" data-column-menu="resources">
+                                            <div class="filter-option" data-filter-value="All">Show All</div>
+                                            <!-- Resources options populated by JS -->
+                                        </div>
+                                    </button>
+                                </div>
+                            </th>
+                            <th scope="col" class="px-3 py-3 text-center text-xs font-medium text-neutral-subtle uppercase tracking-wider w-12">
+                                Delete
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody id="trainingTableBody" class="bg-white divide-y divide-gray-200">
+                        <!-- Content rendered by JS initTraining() -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer class="bg-white border-t border-gray-200 mt-16">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8 text-center text-neutral-subtle text-sm">
+            Interactive Admin Operations Plan | Generated from Source Report
+        </div>
+    </footer>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="deleteModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-gray-900 bg-opacity-50 transition-opacity" aria-modal="true" role="dialog">
+        <div class="bg-white rounded-xl shadow-2xl max-w-sm w-full m-4 p-6 transform transition-all">
+            <h3 class="text-xl font-semibold text-red-600 mb-4">Confirm Deletion</h3>
+            <p class="text-neutral-subtle mb-6">Are you sure you want to permanently delete this training item? This action cannot be undone.</p>
+            <div class="flex justify-end space-x-3">
+                <button id="cancelDeleteBtn" onclick="cancelDelete()" class="px-4 py-2 text-sm font-semibold text-neutral-subtle bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">
+                    Cancel
+                </button>
+                <button id="confirmDeleteBtn" onclick="confirmDelete()" class="px-4 py-2 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // --- GLOBAL STATE & DATA DECLARATIONS ---
+        // Load data from Local Storage or use defaults
+        let teamData = {
+            seattle: [
+                { staff: "Alek Puloka", pos: "Admin Support Supervisor", schedule: ["Telework", "In Office", "In Office", "Telework", "In Office"] },
+                { staff: "Diva Springmeyer", pos: "Admin Specialist II", schedule: ["In Office", "Telework", "In Office", "Telework", "In Office"] },
+                { staff: "Sherri Pena", pos: "Admin Specialist I", schedule: ["Telework", "In Office", "In Office", "Telework", "In Office"] },
+                { staff: "Feliz Sanchez", pos: "Accounting Tech II", schedule: ["In Office", "Telework", "In Office", "In Office", "Telework"] },
+                { staff: "Josh Estacio", pos: "Admin Specialist II", schedule: ["In Office", "Telework", "In Office", "In Office", "Telework"] },
+                { staff: "Jenney Therrien", pos: "Office Aid", schedule: ["In Office", "In Office", "In Office", "In Office", "In Office"] }
+            ],
+            skc: [
+                { staff: "Alek Puloka", pos: "Admin Support Supervisor", schedule: ["Telework", "In Office", "In Office", "Telework", "In Office"] },
+                { staff: "Mendel Saturnino", pos: "Admin Specialist II", schedule: ["Telework", "In Office", "In Office", "Telework", "In Office"] },
+                { staff: "Brieah Marino", pos: "Admin Specialist II", schedule: ["In Office", "Telework", "In Office", "In Office", "Telework"] },
+                { staff: "Fredo Mauricio", pos: "Admin Specialist I", schedule: ["Telework", "In Office", "In Office", "Telework", "In Office"] },
+                { staff: "Kellie Howell", pos: "Admin Specialist I", schedule: ["In Office", "Telework", "In Office", "In Office", "Telework"] },
+                { staff: "Merle Ellison", pos: "Admin Specialist I", schedule: ["Telework", "Telework", "Telework", "Telework", "Telework"] },
+                { staff: "Stephanie Day", pos: "Office Aid", schedule: ["In Office", "Telework", "In Office", "In Office", "Telework"] }
+            ]
+        };
+
+        let functionalData = {
+            admin1: {
+                name: "Admin Specialist I",
+                tasks: [
+                    { area: "Frontline and Customer Support", task: "Staff main phone lines; process mail; route faxes; receive, route, and respond to inquiries from internal and external stakeholders." },
+                    { area: "Records and Data Management", task: "File, scan, archive, and distribute records following City retention policies." },
+                    { area: "Scheduling and Coordination", task: "Track team calendar coverage; set up room reservations and meeting logistics." },
+                    { area: "Financial Processing and Procurement", task: "Collect receipts and documentation; deliver coding support for invoices." },
+                    { area: "Reporting and Tracking", task: "Enter and update tracking logs (mail, deliveries, timesheet submissions)." },
+                    { area: "Fleet and Facilities", task: "Assist with vehicle reservations and key coordination." },
+                    { area: "Technology and SharePoint", task: "Maintain document library order and accessibility." },
+                    { area: "Special Projects and Strategic Initiatives", task: "Support event coordination and divisional recognition activities." }
+                ]
+            },
+            admin2: {
+                name: "Admin Specialist II",
+                tasks: [
+                    { area: "Onboarding and Offboarding Support", task: "Coordinate onboarding and offboarding processes for new and exiting staff: submit IT and facilities tickets, assist with seat assignments and workspace setup, ensure equipment distribution and collection, and provide orientation support as needed." },
+                    { area: "Records and Data Management", task: "Maintain and verify case management data in systems (CMC, Barcode, CARE, GetCare). Prepare data reports for leadership decision-making." },
+                    { area: "Scheduling and Coordination", task: "Coordinate meetings for management teams and ensure agenda, presentation, and materials preparation." },
+                    { area: "Financial Processing and Procurement", task: "Process accounts payable, monitor credit card use, verify invoice coding, and track budget expenditures." },
+                    { area: "Reporting and Tracking", task: "Create and maintain detailed tracking systems for program metrics, caseload reporting, and administrative processes." },
+                    { area: "Fleet and Facilities", task: "Handle divisional property and space coordination, work orders, and vendor requests." },
+                    { area: "Technology", task: "Support staff with computer and laptop setup, troubleshooting, and equipment check-out; collaborate with IT for system issue escalation." },
+                    { area: "Special Projects and Strategic Initiatives", task: "Lead documentation and progress reporting for special administrative initiatives and citywide process improvements." }
+                ]
+            },
+            supervisor: {
+                name: "Admin Support Supervisor",
+                tasks: [
+                    { area: "Team Leadership & Guidance", task: "Supervise, coach, and support administrative staff, lead collaboration, communicate expectations, resolve escalations" },
+                    { area: "Operations & Resource Management", task: "Oversee office equipment, supplies, fleet vehicles, ensure workspace setup, procurement, vendor coordination" },
+                    { area: "Process Improvement & Reporting", task: "Develop and refine processes, ensure consistency, compile, review, and track metrics and compliance reports" },
+                    { area: "Technology & Systems Oversight", task: "Serve as SharePoint/IT lead, approve access, coordinate onboarding/offboarding technology needs" },
+                    { area: "Project & Initiative Leadership", task: "Lead special projects and divisional support initiatives, drive emergency preparedness, cross-training, and best practices" },
+                    { area: "Financial/Procurement", task: "Purchase oversight" },
+                ]
+            },
+            acctTech: {
+                name: "Accounting Tech II",
+                tasks: [
+                    { area: "Accounts Payable Processing", task: "Accurately review, code, and process all divisional invoices, manage accounts payable emails and attachments, resolve discrepancies." },
+                    { area: "Financial Documentation & Compliance", task: "Prepare and authorize expenditure documentation, audit, file, and reconcile records in compliance with city policies." },
+                    { area: "Invoice & Records Management", task: "Track invoices, client orders, and payments in Excel, SharePoint." },
+                    { area: "Reporting & Tracking", task: "Monthly/quarterly reports" },
+                    { area: "Teamwork & Collaboration", task: "Serve as backup for other admin support staff" }
+                ]
+            },
+            officeAid: {
+                name: "Office Aid",
+                tasks: [
+                    { area: "Frontline & Customer Support", task: "Support with incoming and outbound mail." },
+                    { area: "Supplies", task: "Organize and restock office and supply closets daily." },
+                    { area: "Scheduling & Coordination", task: "Prep conference rooms each morning; Manage and update conference room calendars to reflect current bookings." },
+                    { area: "Financial/Procurement", task: "Load and refill printer/copier paper and supplies daily to ensure readiness." },
+                    { area: "Reporting & Tracking", task: "Update in-office signage, such as directional or event notices, as needed." },
+                    { area: "Special Projects/Initiatives", task: "Event admin duties" }
+                ]
+            }
+        };
+        
+        let strategicGoals = [
+             { id: 1, title: "Build Staff Capacity:", description: "Provide cross-training between Admin Spec I and Admin Spec II roles to ensure consistent coverage of all tasks and team functions." },
+             { id: 2, title: "Standardize Processes:", description: "Develop and maintain SOPs and training documents for all team functions." },
+             { id: 3, title: "Expand Division-Wide Administrative Support:", description: "Deliver comprehensive support to division leadership, contracts, and planning units by proactively aligning administrative resources, streamlining coordination with program managers, and enhancing service delivery across all core functions" },
+             { id: 4, title: "Align Roles and Support Levels:", description: "Collaborate with division leadership to assess, realign, and clarify administrative responsibilities, ensuring all staff work within the scope of their roles. Adjust support assignments as needed based on changing program and leadership priorities, so resources are matched to operational and strategic needs." }
+        ];
+
+        let trainingData = [
+            { skill: "Meeting Notes", topics: "Best practices, live documentation, follow-up summaries", contact: "Alek Puloka", date: "Q4 2025", resources: "SharePoint Docs" },
+            { skill: "Finance", topics: "Purchasing, invoice coding, travel, meals, refreshments", contact: "Feliz Sanchez", date: "Q4 2025", resources: "Finance SOP" },
+            { skill: "Managing Office Supplies", topics: "Ordering, inventory, distribution", contact: "Jenney Therrien", date: "Q4 2025", resources: "Inventory Log" },
+            { skill: "Computers", topics: "IT tickets, troubleshooting, user setup", contact: "Josh Estacio", date: "Q1 2026", resources: "IT Ticket System" },
+            { skill: "Cellphones", topics: "Assignment, setup, troubleshooting", contact: "Diva Springmeyer", date: "Q1 2026", resources: "Asset Tracker" },
+            { skill: "Cars", topics: "Reservation, usage logs, maintenance tracking", contact: "Sherri Pena", date: "Q1 2026", resources: "Fleet Manual" },
+            { skill: "Booking Conference Rooms", topics: "Calendar systems, space coordination", contact: "Mendel Saturnino", date: "Q4 2025", resources: "Outlook/Teams" },
+            { skill: "Scheduling Meetings", topics: "Outlook, Teams, Zoom logistics", contact: "Brieah Marino", date: "Q4 2025", resources: "Outlook/Teams" },
+            { skill: "Business Cards", topics: "Ordering, proofing, distribution", contact: "Fredo Mauricio", date: "Q1 2026", resources: "Vendor Portal" },
+            { skill: "Managing Websites", topics: "SharePoint, content posting, permissions", contact: "Kellie Howell", date: "Q2 2026", resources: "SharePoint Guide" },
+            { skill: "Distribution Lists", topics: "Create/manage lists, permissions, city protocols", contact: "Merle Ellison", date: "Q2 2026", resources: "City IT Policy" },
+            { skill: "Archiving", topics: "City retention policies, scanning, digital archive steps", contact: "Stephanie Day", date: "Q2 2026", resources: "Retention Schedule" }
+        ];
+
+        let currentTeam = 'seattle';
+        let currentPositionFilter = 'All'; 
+        let currentStaffFilter = 'All'; 
+        let currentSortKey = 'staff';
+        let currentSortDir = 'asc';
+        let currentDayFilters = { 'Mon': 'All', 'Tue': 'All', 'Wed': 'All', 'Thu': 'All', 'Fri': 'All' };
+        let currentTrainingFilters = { 'skill': 'All', 'contact': 'All', 'date': 'All', 'resources': 'All' };
+        
+        // Global state for deletion confirmation
+        let itemIndexToDelete = null; 
+        
+        // State to track unsaved changes
+        let isDirty = false;
+
+        // --- UNDO/REDO STACK ---
+        let undoStack = [];
+        let redoStack = [];
+        const MAX_STACK_SIZE = 20;
+        
+        const dayKeys = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+        
+        let rosterTableBody, rosterTitle, btnSeattle, btnSkc, roleTabsContainer, roleContentContainer, saveTrainingBtn, addTrainingBtn;
+        // Declare modal elements (will be assigned in DOMContentLoaded)
+        let deleteModal, undoBtn, redoBtn;
+        
+        // --- UTILITY FUNCTIONS ---
+
+        /**
+         * Clones all major data structures into a single state object.
+         * We use JSON stringify/parse for a deep clone to ensure separation.
+         */
+        function getCurrentAppState() {
+            return {
+                overviewDescription: document.getElementById('overviewDescription')?.textContent.trim() || '',
+                goalsIntroduction: document.getElementById('goalsIntroduction')?.textContent.trim() || '',
+                strategicGoals: JSON.parse(JSON.stringify(strategicGoals)),
+                functionalData: JSON.parse(JSON.stringify(functionalData)),
+                teamData: JSON.parse(JSON.stringify(teamData)),
+                trainingData: JSON.parse(JSON.stringify(trainingData))
+            };
+        }
+
+        /**
+         * Pushes the current state onto the undo stack. Clears the redo stack.
+         */
+        function pushStateToUndoStack() {
+            const currentState = getCurrentAppState();
+            const lastState = undoStack[undoStack.length - 1];
+
+            // Only push if the state is genuinely different from the last state
+            if (undoStack.length === 0 || JSON.stringify(currentState) !== JSON.stringify(lastState)) {
+                undoStack.push(currentState);
+                // Trim stack size
+                if (undoStack.length > MAX_STACK_SIZE) {
+                    undoStack.shift();
+                }
+                redoStack = []; // Clear redo stack on new action
+                updateUndoRedoButtons();
+            }
+        }
+
+        /**
+         * Applies a state from the stack to the global variables and rerenders.
+         * @param {Object} state - The state object to restore.
+         */
+        function applyState(state) {
+            // Apply text content directly
+            if (document.getElementById('overviewDescription')) {
+                document.getElementById('overviewDescription').textContent = state.overviewDescription;
+            }
+            if (document.getElementById('goalsIntroduction')) {
+                document.getElementById('goalsIntroduction').textContent = state.goalsIntroduction;
+            }
+
+            // Apply object state
+            strategicGoals = state.strategicGoals;
+            functionalData = state.functionalData;
+            teamData = state.teamData;
+            trainingData = state.trainingData;
+
+            // Rerender all components based on new state
+            renderStrategicGoals();
+            updateCoverageSection();
+            renderRoleContent(roleTabsContainer.querySelector('.role-tab.active')?.dataset.role || 'officeAid');
+            renderTrainingTable();
+            
+            // Mark all save buttons as dirty since undo/redo is a change that hasn't been persisted to Local Storage
+            isDirty = true;
+            document.querySelectorAll('button[onclick^="saveAllEditableContent"]').forEach(btn => btn.classList.remove('hidden'));
+        }
+
+        /**
+         * Undoes the last change by moving a state from the undo stack to the redo stack.
+         */
+        function undoState() {
+            if (undoStack.length > 1) { // Need at least two states: current and previous
+                // Move the current state to the redo stack
+                const currentState = undoStack.pop();
+                redoStack.push(currentState);
+
+                // Apply the previous state (now the new last item on the undo stack)
+                const previousState = undoStack[undoStack.length - 1];
+                applyState(previousState);
+                updateUndoRedoButtons();
+            }
+        }
+
+        /**
+         * Redoes the last undone change by moving a state from the redo stack to the undo stack.
+         */
+        function redoState() {
+            if (redoStack.length > 0) {
+                // Get the state from the redo stack and apply it
+                const nextState = redoStack.pop();
+                undoStack.push(nextState);
+                applyState(nextState);
+                updateUndoRedoButtons();
+            }
+        }
+
+        /**
+         * Updates the disabled state of the Undo/Redo buttons based on stack size.
+         */
+        function updateUndoRedoButtons() {
+            if (undoBtn) {
+                // If only the initial state exists, disable undo
+                undoBtn.disabled = undoStack.length <= 1;
+            }
+            if (redoBtn) {
+                redoBtn.disabled = redoStack.length === 0;
+            }
+        }
+
+        /**
+         * Finds the closest save button for a changed element and makes it visible.
+         * Sets the global isDirty flag to true and pushes state to stack.
+         * @param {HTMLElement} element The editable element that triggered the change.
+         */
+        function markAsChanged(element) {
+            isDirty = true;
+            const section = element.closest('section');
+            if (section) {
+                // Find the save button within that section's header/container
+                const saveButton = section.querySelector('button[onclick^="saveAllEditableContent"]');
+                if (saveButton) {
+                    saveButton.classList.remove('hidden');
+                }
+            }
+            // Debounce state push to avoid stacking multiple intermediate states while typing rapidly
+            clearTimeout(window.pushStateTimeout);
+            window.pushStateTimeout = setTimeout(pushStateToUndoStack, 300);
+        }
+
+        // --- LOCAL STORAGE FUNCTIONS (GENERAL PURPOSE) ---
+        
+        function getEditableGoalsFromDOM() {
+            const goals = [];
+            document.querySelectorAll('#strategicGoalsList > li').forEach(li => {
+                const titleElement = li.querySelector('[data-goal-key="title"]');
+                const descriptionElement = li.querySelector('[data-goal-key="description"]');
+                if (titleElement && descriptionElement) {
+                    goals.push({
+                        id: parseInt(li.dataset.goalId),
+                        title: titleElement.textContent.trim(),
+                        description: descriptionElement.textContent.trim()
+                    });
+                }
+            });
+            return goals;
+        }
+
+        function loadGeneralData(key, defaultData = null) {
+            if (typeof localStorage !== 'undefined') {
+                try {
+                    const storedData = localStorage.getItem(key);
+                    return storedData ? JSON.parse(storedData) : defaultData;
+                } catch (e) {
+                    console.error(`Could not load data for key: ${key}`, e);
+                    return defaultData;
+                }
+            }
+            return defaultData;
+        }
+
+        function saveGeneralData(key, data) {
+            if (typeof localStorage !== 'undefined') {
+                try {
+                    localStorage.setItem(key, JSON.stringify(data));
+                } catch (e) {
+                    console.error(`Could not save data for key: ${key}`, e);
+                }
+            }
+        }
+        
+        function loadEditableContent() {
+            // 1. Overview Text
+            const overviewEl = document.getElementById('overviewDescription');
+            const storedOverview = loadGeneralData('overviewDescription');
+            if (overviewEl && storedOverview) {
+                overviewEl.textContent = storedOverview;
+            }
+            
+            // 2. Goals Introduction
+            const goalsIntroEl = document.getElementById('goalsIntroduction');
+            const storedGoalsIntro = loadGeneralData('goalsIntroduction');
+            if (goalsIntroEl && storedGoalsIntro) {
+                goalsIntroEl.textContent = storedGoalsIntro;
+            }
+
+            // 3. Strategic Goals
+            const storedGoals = loadGeneralData('strategicGoals');
+            if (storedGoals) {
+                 strategicGoals = storedGoals;
+                 renderStrategicGoals();
+            }
+
+            // 4. Team Functions
+            const storedFunctions = loadGeneralData('functionalData');
+            if (storedFunctions) {
+                // Merge loaded data into the structure, ensuring keys are preserved
+                Object.keys(functionalData).forEach(key => {
+                    if (storedFunctions[key]) {
+                        functionalData[key].name = storedFunctions[key].name;
+                        functionalData[key].tasks = storedFunctions[key].tasks;
+                    }
+                });
+            }
+
+            // 5. Training Data
+            const storedTraining = loadGeneralData('trainingData');
+            if (storedTraining) {
+                trainingData = storedTraining.map(item => ({
+                    ...item,
+                    resources: item.resources || 'N/A' 
+                }));
+            }
+            
+            // 6. Roster Data (teamData)
+            const storedTeamData = loadGeneralData('teamData');
+            if (storedTeamData) {
+                // IMPORTANT: Since teamData structure is complex, ensure a deep merge or replacement is safe.
+                // For simplicity and structure preservation, we'll replace the inner data arrays.
+                if (storedTeamData.seattle) {
+                    teamData.seattle = storedTeamData.seattle;
+                }
+                if (storedTeamData.skc) {
+                    teamData.skc = storedTeamData.skc;
+                }
+            }
+            
+            // State is clean after loading
+            isDirty = false;
+        }
+
+        // Modified save function to accept an optional button element for feedback
+        function saveAllEditableContent(saveButton = null) {
+            // 1. Save Overview Text
+            const overviewEl = document.getElementById('overviewDescription');
+            if (overviewEl) {
+                saveGeneralData('overviewDescription', overviewEl.textContent.trim());
+            }
+
+            // 2. Save Goals Introduction
+            const goalsIntroEl = document.getElementById('goalsIntroduction');
+            if (goalsIntroEl) {
+                saveGeneralData('goalsIntroduction', goalsIntroEl.textContent.trim());
+            }
+
+            // 3. Save Strategic Goals (Must extract from DOM as users might have edited them)
+            const currentGoals = getEditableGoalsFromDOM();
+            saveGeneralData('strategicGoals', currentGoals);
+
+            // 4. Save Team Functions (functionalData object should be up-to-date via handleRoleEdit)
+            saveGeneralData('functionalData', functionalData);
+
+            // 5. Save Training Data
+            const dataToSave = trainingData.map(({ originalIndex, ...rest }) => rest);
+            saveGeneralData('trainingData', dataToSave);
+            
+            // 6. Save Roster Data (teamData)
+            saveGeneralData('teamData', teamData);
+            
+            // NEW: Reset dirty state after saving
+            isDirty = false;
+
+            // Provide visual feedback and hide button
+            if (saveButton) {
+                const originalText = saveButton.textContent;
+                saveButton.textContent = 'Saved!';
+                saveButton.classList.add('bg-green-600', 'hover:bg-green-700');
+                saveButton.classList.remove('bg-accent-dark', 'hover:bg-accent-base');
+
+                setTimeout(() => {
+                    saveButton.textContent = originalText;
+                    saveButton.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    saveButton.classList.add('bg-accent-dark', 'hover:bg-accent-base', 'hidden');
+                }, 1500);
+            }
+        }
+
+
+        // --- STRATEGIC GOALS FUNCTIONS ---
+
+        function renderStrategicGoals() {
+            const goalsList = document.getElementById('strategicGoalsList');
+            if (goalsList) {
+                goalsList.innerHTML = strategicGoals.map(goal => `
+                    <li class="flex items-start" data-goal-id="${goal.id}">
+                        <span class="text-xl font-bold text-accent-dark mr-3 mt-1">${goal.id}.</span>
+                        <div>
+                            <h4 class="font-semibold text-neutral-text" contenteditable="true" data-goal-key="title">${goal.title}</h4>
+                            <p class="text-neutral-subtle" contenteditable="true" data-goal-key="description">${goal.description}</p>
+                        </div>
+                    </li>
+                `).join('');
+                
+                goalsList.querySelectorAll('[contenteditable="true"]').forEach(el => {
+                    el.addEventListener('blur', handleGoalEdit);
+                });
+            }
+        }
+
+        function handleGoalEdit(e) {
+            const target = e.target;
+            markAsChanged(target); // Mark changes & push to stack
+            const listItem = target.closest('li');
+            if (!listItem) return;
+
+            const goalId = parseInt(listItem.dataset.goalId, 10);
+            const key = target.dataset.goalKey;
+            const newValue = target.textContent.trim();
+
+            const goal = strategicGoals.find(g => g.id === goalId);
+
+            if (goal && key) {
+                goal[key] = newValue;
+            }
+        }
+        
+        // --- COVERAGE TABLE FUNCTIONS ---
+
+        function getUniqueValues(key, team) {
+            // Use local/current teamData for unique values in case of edits
+            const sourceData = teamData[team] || [...teamData.seattle, ...teamData.skc];
+            const values = sourceData.map(p => p[key]);
+            return [...new Set(values)].filter(val => val !== 'All').sort();
+        }
+
+        function populateRosterFilterMenus() {
+            const staffValues = getUniqueValues('staff', currentTeam);
+            const posValues = getUniqueValues('pos', 'all'); 
+            
+            // Note: Day filters are hardcoded in HTML as they only have 'All', 'In Office', 'Telework'
+            const staffMenu = document.querySelector('[data-column-menu="staff"]');
+            const posMenu = document.querySelector('[data-column-menu="pos"]');
+            
+            if (staffMenu) {
+                // Clear and repopulate staff filter options
+                 staffMenu.innerHTML = `
+                    <div class="filter-option" data-filter-key="staff" data-filter-value="All">Show All</div>
+                    ${staffValues.map(val => `<div class="filter-option" data-filter-key="staff" data-filter-value="${val}">${val}</div>`).join('')}
+                `;
+            }
+            
+            if (posMenu) {
+                // Clear and repopulate position filter options
+                posMenu.innerHTML = `
+                    <div class="filter-option" data-filter-key="pos" data-filter-value="All">Show All</div>
+                    ${posValues.map(val => `<div class="filter-option" data-filter-key="pos" data-filter-value="${val}">${val}</div>`).join('')}
+                `;
+            }
+        }
+        
+        function sortData(data, key, direction) {
+            // No sort means return to original index order
+            if (direction === 'none') return data.sort((a, b) => a.originalIndex - b.originalIndex);
+
+            const dayIndex = dayKeys.indexOf(key);
+
+            return data.sort((a, b) => {
+                let valA, valB;
+
+                if (key === 'staff' || key === 'pos') {
+                    valA = a[key].toLowerCase();
+                    valB = b[key].toLowerCase();
+                } else if (dayIndex !== -1) {
+                    // Sort day columns primarily by In Office/Telework, then secondary sort by staff name
+                    valA = a.schedule[dayIndex] === 'In Office' ? 0 : 1;
+                    valB = b.schedule[dayIndex] === 'In Office' ? 0 : 1;
+                    if (valA === valB) {
+                        return a.staff.toLowerCase().localeCompare(b.staff.toLowerCase());
+                    }
+                } else {
+                    return 0;
+                }
+
+                let comparison = 0;
+                if (valA > valB) {
+                    comparison = 1;
+                } else if (valA < valB) {
+                    comparison = -1;
+                }
+
+                // Apply direction
+                return direction === 'asc' ? comparison : comparison * -1;
+            });
+        }
+        
+        // New handler for contenteditable cells (staff/position)
+        function handleRosterEdit(e) {
+            const target = e.target;
+            markAsChanged(target); // Mark changes & push to stack
+            const row = target.closest('tr');
+            if (!row) return;
+
+            const index = parseInt(row.dataset.originalIndex, 10);
+            const key = target.dataset.column; // 'staff' or 'pos'
+            const newValue = target.textContent.trim();
+            
+            // Find the item by original index and current team
+            const item = teamData[currentTeam].find(item => item.originalIndex === index);
+
+            if (item && key) {
+                item[key] = newValue;
+                updateCoverageSection(); 
+            }
+        }
+        
+        // New handler for schedule dropdown change
+        function handleScheduleChange(e) {
+            const target = e.target;
+            markAsChanged(target); // Mark changes & push to stack
+            const row = target.closest('tr');
+            if (!row) return;
+
+            const index = parseInt(row.dataset.originalIndex, 10);
+            const dayIndex = parseInt(target.dataset.dayIndex, 10);
+            const newValue = target.value;
+
+            // Find the item by original index and current team
+            const item = teamData[currentTeam].find(item => item.originalIndex === index);
+
+            if (item && item.schedule && item.schedule[dayIndex] !== undefined) {
+                item.schedule[dayIndex] = newValue;
+                updateCoverageSection(); // Re-render to update the visual style of the dropdown/badge colors
+            }
+        }
+        
+        // Delegated click handler for the roster table body
+        function handleRosterTableClick(e) {
+            const row = e.target.closest('tr');
+            if (row && row.dataset.originalIndex) {
+                 // Check if the click was on an editable cell to prevent table sorting
+            }
+        }
+        
+
+        function updateSortIcons() {
+            document.querySelectorAll('.sortable-header').forEach(header => {
+                const key = header.dataset.sortKey;
+                const icon = header.querySelector('.sort-icon');
+                header.classList.remove('sorted');
+                if (icon) icon.innerHTML = '';
+                
+                if (key === currentSortKey) {
+                    header.classList.add('sorted');
+                    if (icon) {
+                        if (currentSortDir === 'asc') {
+                            icon.innerHTML = '▲';
+                        } else if (currentSortDir === 'desc') {
+                            icon.innerHTML = '▼';
+                        }
+                    }
+                }
+            });
+        }
+
+        function renderRosterTable(data) {
+            
+            const filteredData = data.filter(person => {
+                const matchesStaff = currentStaffFilter === 'All' || person.staff === currentStaffFilter;
+                const matchesPosition = currentPositionFilter === 'All' || person.pos === currentPositionFilter;
+                
+                const matchesDays = dayKeys.every((day, index) => {
+                    const requiredStatus = currentDayFilters[day];
+                    return requiredStatus === 'All' || person.schedule[index] === requiredStatus;
+                });
+
+                return matchesStaff && matchesPosition && matchesDays;
+            });
+            
+            const sortedData = sortData(filteredData, currentSortKey, currentSortDir);
+
+            if (rosterTableBody) {
+                if (sortedData.length === 0) {
+                    rosterTableBody.innerHTML = `<tr><td colspan="7" class="px-6 py-4 text-center text-neutral-subtle">No staff found matching the current filters.</td></tr>`;
+                    return;
+                }
+
+                rosterTableBody.innerHTML = sortedData.map(person => `
+                    <tr class="hover:bg-gray-50" data-original-index="${person.originalIndex}">
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div contenteditable="true" data-column="staff" class="text-sm font-medium text-neutral-text focus:ring-2 focus:ring-accent-dark focus:bg-accent-light rounded px-1 -mx-1">${person.staff}</div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <div contenteditable="true" data-column="pos" class="text-sm text-neutral-subtle focus:ring-2 focus:ring-accent-dark focus:bg-accent-light rounded px-1 -mx-1">${person.pos}</div>
+                        </td>
+                        ${person.schedule.map((status, index) => `
+                            <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                <select onchange="handleScheduleChange(event)" data-day-index="${index}" class="schedule-select ${status === 'In Office' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}">
+                                    <option value="In Office" ${status === 'In Office' ? 'selected' : ''}>In Office</option>
+                                    <option value="Telework" ${status === 'Telework' ? 'selected' : ''}>Telework</option>
+                                </select>
+                            </td>
+                        `).join('')}
+                    </tr>
+                `).join('');
+                
+                // Add blur listener for the contenteditable cells
+                rosterTableBody.querySelectorAll('[contenteditable="true"]').forEach(cell => {
+                    cell.addEventListener('blur', handleRosterEdit);
+                });
+            }
+            
+            updateSortIcons();
+            updateAllHeaderFilterStatus();
+        }
+        
+        function updateCoverageSection() {
+            // Re-map to ensure original index is always present for sorting
+            const data = teamData[currentTeam].map((item, index) => ({...item, originalIndex: index})); 
+            renderRosterTable(data);
+            
+            if (rosterTitle) rosterTitle.textContent = `${currentTeam === 'seattle' ? 'Seattle' : 'SKC'} Admin Team Roster`;
+            if (btnSeattle) btnSeattle.classList.toggle('active', currentTeam === 'seattle');
+            if (btnSkc) btnSkc.classList.toggle('active', currentTeam === 'skc');
+
+            // Need to repopulate menus every time the team changes to reflect staff
+            populateRosterFilterMenus();
+        }
+        
+        function handleSortClick(e) {
+            const header = e.target.closest('.sortable-header');
+            if (!header) return;
+
+            // Prevent sort if clicking the filter button inside the header
+            if (e.target.closest('.filter-btn')) {
+                return; 
+            }
+
+            const key = header.dataset.sortKey;
+            let direction = header.dataset.sortDir;
+            
+            if (key !== currentSortKey) {
+                currentSortKey = key;
+                direction = 'asc';
+            } else {
+                if (direction === 'none') {
+                    direction = 'asc';
+                } else if (direction === 'asc') {
+                    direction = 'desc';
+                } else {
+                    direction = 'none';
+                }
+            }
+
+            currentSortDir = direction;
+            header.dataset.sortDir = direction;
+            
+            // Reset other headers' sort direction to 'none' if they aren't the current key
+            document.querySelectorAll('.sortable-header').forEach(h => {
+                if (h !== header) {
+                    h.dataset.sortDir = 'none';
+                }
+            });
+
+            updateCoverageSection();
+        }
+        
+        function updateAllHeaderFilterStatus() {
+            document.querySelectorAll('#coverage .sortable-header').forEach(header => {
+                const column = header.dataset.sortKey;
+                const filterBtn = header.querySelector('.filter-btn');
+                if (!filterBtn) return;
+                
+                const menu = header.querySelector('.filter-menu');
+                let currentValue = 'All';
+
+                if (column === 'staff') {
+                    currentValue = currentStaffFilter;
+                } else if (column === 'pos') {
+                    currentValue = currentPositionFilter;
+                } else if (dayKeys.includes(column)) {
+                    currentValue = currentDayFilters[column];
+                }
+                
+                if (menu) {
+                    menu.querySelectorAll('.filter-option').forEach(option => {
+                        option.classList.remove('active');
+                    });
+
+                    const activeOption = menu.querySelector(`[data-filter-value="${currentValue}"]`);
+                    if(activeOption) {
+                        activeOption.classList.add('active');
+                    }
+                }
+
+                // Highlight filter button if an active filter is present
+                if (currentValue !== 'All') {
+                    filterBtn.classList.add('text-accent-dark');
+                } else {
+                    filterBtn.classList.remove('text-accent-dark');
+                }
+            });
+        }
+        
+        function initCoverage() {
+            rosterTableBody = document.getElementById('rosterTableBody');
+            rosterTitle = document.getElementById('rosterTitle');
+            btnSeattle = document.getElementById('btn-seattle');
+            btnSkc = document.getElementById('btn-skc');
+            
+            // Add original index to data for stable sorting
+            Object.keys(teamData).forEach(team => {
+                teamData[team] = teamData[team].map((item, index) => ({...item, originalIndex: index}));
+            });
+
+            if (btnSeattle) {
+                btnSeattle.addEventListener('click', () => {
+                    currentTeam = 'seattle';
+                    currentPositionFilter = 'All';
+                    currentStaffFilter = 'All';
+                    currentSortKey = 'staff';
+                    currentSortDir = 'asc';
+                    currentDayFilters = { 'Mon': 'All', 'Tue': 'All', 'Wed': 'All', 'Thu': 'All', 'Fri': 'All' };
+                    updateCoverageSection();
+                });
+            }
+            if (btnSkc) {
+                btnSkc.addEventListener('click', () => {
+                    currentTeam = 'skc';
+                    currentPositionFilter = 'All';
+                    currentStaffFilter = 'All';
+                    currentSortKey = 'staff';
+                    currentSortDir = 'asc';
+                    currentDayFilters = { 'Mon': 'All', 'Tue': 'All', 'Wed': 'All', 'Thu': 'All', 'Fri': 'All' };
+                    updateCoverageSection();
+                });
+            }
+            
+            const tableHead = document.querySelector('#coverage table thead');
+            if (tableHead) {
+                tableHead.addEventListener('click', handleSortClick);
+            }
+            
+            // Roster Table Body listener for edit delegation (currently only handles blur/change events on rendered elements)
+            if (rosterTableBody) {
+                rosterTableBody.addEventListener('click', handleRosterTableClick);
+            }
+            
+            populateRosterFilterMenus(); 
+            updateCoverageSection();
+        }
+
+        // --- ROLE FUNCTIONS ---
+        
+        function handleRoleEdit(e) {
+            const target = e.target;
+            markAsChanged(target); // Mark changes & push to stack
+            const container = target.closest('[data-task-index]');
+            if (!container) return;
+
+            const roleTab = roleTabsContainer.querySelector('.role-tab.active');
+            if (!roleTab) return;
+
+            const roleKey = roleTab.dataset.role;
+            const taskIndex = parseInt(container.dataset.taskIndex, 10);
+            const contentKey = target.dataset.contentKey; // 'area' or 'task'
+            const newValue = target.textContent.trim();
+
+            if (functionalData[roleKey] && functionalData[roleKey].tasks[taskIndex] && contentKey) {
+                functionalData[roleKey].tasks[taskIndex][contentKey] = newValue;
+                // No re-render needed, live object is updated. Rely on save button.
+            }
+        }
+
+        function renderRoleContent(roleKey) {
+            const role = functionalData[roleKey];
+            if (roleContentContainer) {
+                 roleContentContainer.innerHTML = `
+                    <h3 class="text-xl font-semibold text-accent-dark mb-6">${role.name} Responsibilities</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                        ${role.tasks.map((item, index) => `
+                            <div class="border-l-4 border-accent-base pl-4 py-1" data-task-index="${index}">
+                                <h4 class="font-semibold text-neutral-text" contenteditable="true" data-content-key="area">${item.area}</h4>
+                                <p class="text-neutral-subtle" contenteditable="true" data-content-key="task">${item.task}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            // Attach new blur listeners for the editable content
+            roleContentContainer.querySelectorAll('[contenteditable="true"]').forEach(el => {
+                 el.addEventListener('blur', handleRoleEdit);
+            });
+
+            document.querySelectorAll('#roleTabs button').forEach(tab => {
+                tab.classList.toggle('active', tab.dataset.role === roleKey);
+            });
+        }
+        
+        function initRoles() {
+            let currentRole = 'officeAid';
+            
+            roleTabsContainer = document.getElementById('roleTabs');
+            roleContentContainer = document.getElementById('roleContent');
+
+            // Define display order for clarity
+            const roleOrder = ['officeAid', 'admin1', 'admin2', 'acctTech', 'supervisor'];
+
+            if (roleTabsContainer) {
+                 roleTabsContainer.innerHTML = roleOrder.map(key => {
+                    const role = functionalData[key];
+                    // Set 'officeAid' as initial active tab
+                    return `
+                        <button class="role-tab py-2 px-4 border rounded-md text-sm font-semibold ${key === currentRole ? 'active' : ''} has-tooltip" data-role="${key}">
+                            ${role.name}
+                            <span class="tooltip">View ${role.name} tasks</span>
+                        </button>
+                    `;
+                }).join('');
+                
+                roleTabsContainer.addEventListener('click', (e) => {
+                    const tab = e.target.closest('button');
+                    if (tab && tab.dataset.role) {
+                        currentRole = tab.dataset.role;
+                        renderRoleContent(currentRole);
+                    }
+                });
+            }
+            
+            // Initial render
+            renderRoleContent(currentRole);
+        }
+
+        // --- TRAINING TABLE FUNCTIONS (Editable, Persistent) ---
+        
+        function getUniqueTrainingValues(key) {
+            const values = trainingData.map(p => p[key]);
+            const filterKeys = ['skill', 'contact', 'date', 'resources'];
+            
+            if (filterKeys.includes(key)) {
+                return [...new Set(values)].filter(val => val !== 'All' && val !== undefined).sort();
+            }
+            return [];
+        }
+
+        function populateTrainingFilterMenus() {
+            ['skill', 'contact', 'date', 'resources'].forEach(key => {
+                const menu = document.querySelector(`[data-column-menu="${key}"]`);
+                const values = getUniqueTrainingValues(key);
+                
+                if (menu) {
+                    menu.innerHTML = `
+                        <div class="filter-option" data-filter-key="${key}" data-filter-value="All">Show All</div>
+                        ${values.map(val => `<div class="filter-option" data-filter-key="${key}" data-filter-value="${val}">${val}</div>`).join('')}
+                    `;
+                }
+            });
+        }
+        
+        function handleTrainingEdit(e) {
+            const target = e.target;
+            markAsChanged(target); // Mark changes & push to stack
+            const row = target.closest('tr');
+            if (!row) return;
+
+            const rowIndex = row.dataset.index;
+            const columnKey = target.dataset.column;
+            
+            if (rowIndex !== undefined && columnKey) {
+                const newValue = target.textContent.trim();
+                const actualIndex = parseInt(rowIndex, 10); 
+
+                // Note: The index here must be the index within the *original* trainingData array, not the filtered/rendered index
+                if (trainingData[actualIndex]) {
+                    trainingData[actualIndex][columnKey] = newValue;
+                    // Re-render to update potential filter menus immediately
+                    renderTrainingTable();
+                }
+            }
+        }
+
+        // 1. Function to trigger modal
+        function deleteTrainingItem(originalIndex) {
+            itemIndexToDelete = originalIndex;
+            if (deleteModal) {
+                deleteModal.classList.remove('hidden');
+                deleteModal.classList.add('flex');
+            } else {
+                 console.error("Delete Modal element not found! Initialization failed.");
+            }
+        }
+
+        // 2. Function to cancel deletion and hide modal
+        function cancelDelete() {
+            itemIndexToDelete = null;
+            if (deleteModal) {
+                deleteModal.classList.remove('flex');
+                deleteModal.classList.add('hidden');
+            }
+        }
+        
+        // 3. Function to confirm and perform deletion
+        function confirmDelete() {
+            if (itemIndexToDelete !== null) {
+                // Perform the actual deletion using the stored index
+                trainingData.splice(itemIndexToDelete, 1);
+
+                // Reset state and hide modal
+                itemIndexToDelete = null;
+                cancelDelete(); 
+
+                // We push a state here *after* deletion is complete, so UNDO restores the deleted item
+                pushStateToUndoStack();
+
+                // Re-render
+                renderTrainingTable();
+                
+                // Mark the save button as changed so user knows to persist the deletion
+                const saveButton = document.getElementById('saveTrainingBtn');
+                if (saveButton) saveButton.classList.remove('hidden');
+                
+                // Mark state as dirty (deletion is a change)
+                isDirty = true;
+            }
+        }
+        
+        // 4. Function to add a new training item - defined in the global scope
+        function addNewTrainingItem() {
+            const newItem = {
+                skill: "New Training Topic",
+                topics: "Describe goals and content here",
+                contact: "Unassigned",
+                date: "Q4 2026",
+                resources: "Document link"
+            };
+            trainingData.push(newItem);
+            
+            // We push a state here *after* addition is complete, so UNDO removes the added item
+            pushStateToUndoStack();
+            
+            renderTrainingTable(); 
+            
+            // Mark state as dirty and auto-save the change
+            const saveButton = document.getElementById('saveTrainingBtn');
+            saveAllEditableContent(saveButton);
+        }
+        
+        function renderTrainingTable() {
+            const tableBody = document.getElementById('trainingTableBody');
+            
+            const filteredData = trainingData.filter(item => {
+                const matchesSkill = currentTrainingFilters.skill === 'All' || item.skill === currentTrainingFilters.skill;
+                const matchesContact = currentTrainingFilters.contact === 'All' || item.contact === currentTrainingFilters.contact;
+                const matchesDate = currentTrainingFilters.date === 'All' || item.date === currentTrainingFilters.date;
+                const matchesResources = currentTrainingFilters.resources === 'All' || item.resources === currentTrainingFilters.resources;
+
+                return matchesSkill && matchesContact && matchesDate && matchesResources;
+            });
+            
+            if (tableBody) {
+                if (filteredData.length === 0) {
+                    tableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-4 text-center text-neutral-subtle">No training items found matching the current filters.</td></tr>`;
+                    return;
+                }
+
+                tableBody.innerHTML = filteredData.map(item => {
+                    // Find the original index for accurate editing/deletion
+                    const originalIndex = trainingData.indexOf(item);
+                    
+                    // NOTE: Removed inline onclick, replaced with data attribute for event delegation
+                    return `
+                        <tr data-index="${originalIndex}" class="hover:bg-gray-50 transition-colors">
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-text">
+                                <div contenteditable="true" data-column="skill" class="focus:ring-2 focus:ring-accent-dark focus:bg-accent-light rounded px-1 -mx-1">${item.skill}</div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-neutral-subtle">
+                                <div contenteditable="true" data-column="topics" class="focus:ring-2 focus:ring-accent-dark focus:bg-accent-light rounded px-1 -mx-1">${item.topics}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-text">
+                                <div contenteditable="true" data-column="contact" class="focus:ring-2 focus:ring-accent-dark focus:bg-accent-light rounded px-1 -mx-1">${item.contact}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-subtle">
+                                <div contenteditable="true" data-column="date" class="focus:ring-2 focus:ring-accent-dark focus:bg-accent-light rounded px-1 -mx-1">${item.date}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-neutral-subtle">
+                                <div contenteditable="true" data-column="resources" class="focus:ring-2 focus:ring-accent-dark focus:bg-accent-light rounded px-1 -mx-1">${item.resources}</div>
+                            </td>
+                            <td class="px-3 py-4 whitespace-nowrap text-center text-sm">
+                                <button data-delete-index="${originalIndex}" class="delete-btn text-red-500 hover:text-red-700 p-1 rounded transition-colors has-tooltip">
+                                    &#x1F5D1; <!-- Trash Can Icon -->
+                                    <span class="tooltip">Delete Item</span>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+                
+                tableBody.querySelectorAll('[contenteditable="true"]').forEach(cell => {
+                    cell.addEventListener('blur', handleTrainingEdit);
+                });
+            }
+
+            populateTrainingFilterMenus();
+            updateTrainingHeaderFilterStatus();
+        }
+
+        function updateTrainingHeaderFilterStatus() {
+             document.querySelectorAll('#training .training-sortable-header').forEach(header => {
+                const column = header.dataset.sortKey;
+                const filterBtn = header.querySelector('.filter-btn');
+                if (!filterBtn) return;
+                
+                const menu = header.querySelector('.filter-menu');
+                let currentValue = currentTrainingFilters[column] || 'All';
+                
+                if (filterBtn) {
+                    if (currentValue !== 'All') {
+                        filterBtn.classList.add('text-accent-dark');
+                    } else {
+                        filterBtn.classList.remove('text-accent-dark');
+                    }
+                }
+                
+                // Set active class on filter options
+                if (menu) {
+                    menu.querySelectorAll('.filter-option').forEach(option => {
+                        option.classList.remove('active');
+                    });
+
+                    const activeOption = menu.querySelector(`[data-filter-value="${currentValue}"]`);
+                    if(activeOption) {
+                        activeOption.classList.add('active');
+                    }
+                }
+            });
+        }
+
+        // New delegated handler for clicks on the Training table body
+        function handleTrainingTableClick(e) {
+            const deleteButton = e.target.closest('.delete-btn');
+            if (deleteButton) {
+                // CRITICAL FIX: Stop propagation to prevent the global click handler from immediately closing the modal
+                e.stopPropagation();
+                
+                const index = parseInt(deleteButton.dataset.deleteIndex, 10);
+                if (!isNaN(index)) {
+                    deleteTrainingItem(index);
+                }
+            }
+        }
+
+        function initTraining() {
+            // Updated to be simpler, relies on document.getElementById
+            const trainingTableBody = document.getElementById('trainingTableBody'); 
+            
+            const tableHead = document.querySelector('#training table thead');
+            if (tableHead) {
+                 tableHead.addEventListener('click', toggleFilterMenu);
+            }
+            
+            // ATTACH DELEGATED LISTENER HERE
+            if (trainingTableBody) {
+                trainingTableBody.addEventListener('click', handleTrainingTableClick);
+            }
+            
+            document.getElementById('addTrainingBtn').addEventListener('click', addNewTrainingItem);
+
+            renderTrainingTable();
+        }
+        
+        // --- COMMON FILTER LOGIC FOR BOTH TABLES ---
+
+        function toggleFilterMenu(e) {
+            const button = e.target.closest('.filter-btn');
+            if (!button) return;
+
+            const column = button.dataset.column;
+            const menu = document.querySelector(`[data-column-menu="${column}"]`); 
+            
+            // Hide all other open menus
+            document.querySelectorAll('.filter-menu').forEach(m => {
+                if (m !== menu) {
+                    m.classList.add('hidden');
+                }
+            });
+
+            if (menu) {
+                menu.classList.toggle('hidden');
+            }
+            e.stopPropagation(); 
+        }
+
+        function handleFilterSelection(e) {
+            const option = e.target.closest('.filter-option');
+            if (!option) return;
+
+            const menu = option.closest('.filter-menu');
+            const column = menu.dataset.columnMenu;
+            const value = option.dataset.filterValue;
+
+            // Determine which set of filters to update (Coverage or Training)
+            if (document.querySelector('#coverage .filter-menu[data-column-menu="' + column + '"]')) {
+                // Roster Table Filters
+                if (column === 'staff') {
+                    currentStaffFilter = value;
+                } else if (column === 'pos') {
+                    currentPositionFilter = value;
+                } else if (dayKeys.includes(column)) {
+                    currentDayFilters[column] = value;
+                }
+                updateCoverageSection();
+            } else if (document.querySelector('#training .filter-menu[data-column-menu="' + column + '"]')) {
+                // Training Table Filters
+                currentTrainingFilters[column] = value;
+                renderTrainingTable();
+            }
+            
+            menu.classList.add('hidden');
+        }
+        
+        // --- NAVIGATION ---
+        function initNav() {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const sections = document.querySelectorAll('section[id]');
+            
+            // Scroll to section logic
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const targetId = link.getAttribute('href').substring(1);
+                    const targetElement = document.getElementById(targetId);
+                    if (targetElement) {
+                        targetElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }
+                });
+            });
+            
+            // Intersection Observer logic for highlighting active link
+            const observerOptions = {
+                root: null,
+                rootMargin: '0px',
+                threshold: 0.4 // Adjust threshold to determine when a section is considered active
+            };
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const id = entry.target.id;
+                        navLinks.forEach(link => {
+                            link.classList.remove('active');
+                            if (link.getAttribute('href') === `#${id}`) {
+                                link.classList.add('active');
+                            }
+                        });
+                    }
+                });
+            }, observerOptions);
+
+            sections.forEach(section => {
+                observer.observe(section);
+            });
+        }
+
+        function handleKeyPress(e) {
+            // Check for Ctrl+Z (Undo) or Cmd+Z (Mac Undo)
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+                e.preventDefault();
+                undoState();
+            }
+            // Check for Ctrl+Y or Ctrl+Shift+Z (Redo) or Cmd+Shift+Z (Mac Redo)
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.shiftKey && e.key === 'Z'))) {
+                e.preventDefault();
+                redoState();
+            }
+        }
+        
+        // --- MAIN INIT ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // CRITICAL: Get Undo/Redo button references
+            undoBtn = document.getElementById('undoBtn');
+            redoBtn = document.getElementById('redoBtn');
+            // CRITICAL FIX: Initialize deleteModal here so it is available to the deleteTrainingItem function immediately.
+            deleteModal = document.getElementById('deleteModal');
+            
+            // Load persistent data for all editable sections
+            loadEditableContent();
+            
+            // Initialize global filter listeners once
+            document.querySelectorAll('.filter-menu').forEach(menu => {
+                menu.addEventListener('click', handleFilterSelection);
+            });
+
+            // Add blur listener for ALL editable content to trigger the save button visibility
+            document.querySelectorAll('[contenteditable="true"]').forEach(el => {
+                el.addEventListener('blur', (e) => markAsChanged(e.target));
+            });
+            
+            // Initialize event listeners for goals section edits
+            renderStrategicGoals();
+
+
+            initNav();
+            initCoverage();
+            initRoles();
+            initTraining();
+
+            // Push initial state to stack after all data is loaded and rendered
+            pushStateToUndoStack();
+            
+            // NEW: Add beforeunload listener to warn about unsaved changes
+            window.addEventListener('beforeunload', (e) => {
+                if (isDirty) {
+                    // Cancel the event and return a string (required by older browsers)
+                    // Modern browsers ignore the string and display a generic message.
+                    e.preventDefault();
+                    e.returnValue = 'You have unsaved changes. Are you sure you want to leave?'; 
+                    return 'You have unsaved changes. Are you sure you want to leave?'; 
+                }
+            });
+
+            window.addEventListener('keydown', handleKeyPress);
+
+            
+            // Global click listener to close open filter menus and close modal on outside click (optional)
+            document.addEventListener('click', (e) => {
+                // Close filter menus
+                document.querySelectorAll('.filter-menu').forEach(m => m.classList.add('hidden'));
+                
+                // Close modal if clicking outside
+                const modalContent = deleteModal ? deleteModal.querySelector('.bg-white') : null;
+                // Only attempt to close if the modal is currently visible
+                if (deleteModal && deleteModal.classList.contains('flex') && modalContent && !modalContent.contains(e.target)) {
+                    cancelDelete();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
