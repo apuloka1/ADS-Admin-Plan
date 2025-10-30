@@ -125,7 +125,8 @@
         }
         /* Style for the select dropdown in the roster table */
         .schedule-select {
-            padding: 0.25rem;
+            /* INCREASED right padding to clear the arrow better */
+            padding: 0.25rem 1.2rem 0.25rem 0.5rem; 
             border-radius: 0.375rem;
             font-size: 0.875rem;
             line-height: 1.25rem;
@@ -134,9 +135,12 @@
             appearance: none; /* Hide default dropdown arrow */
             background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none'%3e%3cpath d='M6 8l4 4 4-4' stroke='%234b5563' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
             background-repeat: no-repeat;
-            background-position: right 0.5rem center;
-            background-size: 1.5em;
+            background-position: right 0.4rem center; /* Adjusted position slightly */
+            background-size: 1.2em; 
             cursor: pointer;
+            text-align: center;
+            /* CRITICAL FIX: Use text-align-last for cross-browser centering consistency */
+            text-align-last: center; 
         }
         .undo-btn:disabled, .redo-btn:disabled {
             opacity: 0.5;
@@ -157,6 +161,19 @@
                         'neutral-base': '#fafaf9',
                         'neutral-text': '#334155',
                         'neutral-subtle': '#64748b',
+                        // Custom colors for schedule statuses
+                        'green': {
+                            100: '#d1fae5', 800: '#065f46',
+                        },
+                        'blue': {
+                            100: '#dbeafe', 800: '#1e40af',
+                        },
+                        'yellow': {
+                            100: '#fef3c7', 800: '#92400e',
+                        },
+                        'purple': {
+                            100: '#f3e8ff', 800: '#581c87',
+                        },
                     },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
@@ -183,8 +200,14 @@
                         <a href="#roles" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-neutral-subtle border-b-2 border-transparent" data-target="roles">Team Functions</a>
                         <a href="#training" class="nav-link px-3 py-2 rounded-md text-sm font-medium text-neutral-subtle border-b-2 border-transparent" data-target="training">Training</a>
                     </div>
-                    <!-- Undo/Redo Controls -->
-                    <div class="ml-4 flex space-x-2 border-l pl-4">
+                    <!-- Global Save, Undo/Redo Controls -->
+                    <div class="ml-4 flex space-x-2 border-l pl-4 items-center">
+                        <!-- NEW GLOBAL SAVE BUTTON -->
+                        <button id="globalSaveBtn" onclick="saveAllEditableContent(this)" class="bg-accent-dark hover:bg-accent-base text-white font-semibold py-1.5 px-3 rounded-md shadow-md transition duration-150 ease-in-out text-sm hidden has-tooltip">
+                            Save All Changes
+                            <span class="tooltip">Save all edits to browser storage</span>
+                        </button>
+
                         <button id="undoBtn" onclick="undoState()" class="undo-btn text-neutral-subtle hover:text-accent-dark p-2 rounded disabled:opacity-50 disabled:cursor-not-allowed has-tooltip" disabled>
                             &#8630; <!-- Unicode Undo Arrow -->
                             <span class="tooltip">Undo (Ctrl+Z)</span>
@@ -205,11 +228,7 @@
         <section id="overview" class="mb-16 scroll-mt-20">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-3xl font-bold text-neutral-text">Overview</h2>
-                <div class="save-btn-container">
-                    <button id="saveOverviewBtn" onclick="saveAllEditableContent(this)" class="bg-accent-dark hover:bg-accent-base text-white font-semibold py-1.5 px-3 rounded-md shadow-md transition duration-150 ease-in-out text-sm hidden">
-                        Save Changes
-                    </button>
-                </div>
+                <!-- REMOVED save button container -->
             </div>
             <p class="text-lg text-neutral-subtle mb-8" id="overviewDescription" contenteditable="true" data-persist-key="overviewDescription">
                 The ADS administrative team provides comprehensive support to division leadership, Care Coordination Program, and cross-functional operations. The team ensures that day-to-day workflows, financial processing, and data integrity are maintained to support the delivery of essential services to over 15,000 clients and 300 staff members across ADS. This plan defines the administrative structure, primary responsibilities by classification, and ongoing operational objectives.
@@ -223,11 +242,7 @@
         <section id="goals" class="mb-16 scroll-mt-20">
             <div class="flex justify-between items-center mb-4">
                 <h2 class="text-3xl font-bold text-neutral-text">Strategic Goals</h2>
-                <div class="save-btn-container">
-                    <button id="saveGoalsBtn" onclick="saveAllEditableContent(this)" class="bg-accent-dark hover:bg-accent-base text-white font-semibold py-1.5 px-3 rounded-md shadow-md transition duration-150 ease-in-out text-sm hidden">
-                        Save Changes
-                    </button>
-                </div>
+                <!-- REMOVED save button container -->
             </div>
             <p class="text-lg text-neutral-subtle mb-8" id="goalsIntroduction" contenteditable="true" data-persist-key="goalsIntroduction">
                 These goals define the high-level objectives for the administrative team, focusing on process improvement, communication, and capacity building.
@@ -282,10 +297,13 @@
                         SKC Team
                         <span class="tooltip">Show SKC Roster</span>
                     </button>
+                    <!-- NEW: Clear Filters Button for Coverage Dashboard -->
+                    <button id="clearCoverageFiltersBtn" onclick="clearCoverageFilters()" class="bg-gray-400 hover:bg-gray-500 text-white font-semibold py-2 px-6 rounded-full text-sm has-tooltip">
+                        Clear Filters
+                        <span class="tooltip">Remove all active table filters</span>
+                    </button>
                 </div>
-                <div class="save-btn-container">
-                    <!-- Note: Save button for Coverage is removed as data is part of the overall save model -->
-                </div>
+                <!-- REMOVED save button container -->
             </div>
             
             <div class="grid grid-cols-1 gap-8 items-start">
@@ -336,7 +354,7 @@
                                         <div class="flex items-center justify-between">
                                             Mon
                                             <span class="tooltip">Click to Filter Day Status</span>
-                                            <span class="flex items-center space-x-1">
+                                            <span class="flex items-center space-x-1 ml-2"> <!-- Adjusted spacing for better separation -->
                                                 <span class="sort-icon"></span>
                                                 <button class="filter-btn text-neutral-subtle hover:text-accent-dark relative" data-day="Mon" data-column="Mon">
                                                     &#9660; <!-- Unicode triangle for filter -->
@@ -344,6 +362,8 @@
                                                         <div class="filter-option" data-filter-value="All">Show All</div>
                                                         <div class="filter-option" data-filter-value="In Office">In Office</div>
                                                         <div class="filter-option" data-filter-value="Telework">Telework</div>
+                                                        <div class="filter-option" data-filter-value="SMT">SMT (A. Puloka)</div>
+                                                        <div class="filter-option" data-filter-value="Triton">Triton (A. Puloka)</div>
                                                     </div>
                                                 </button>
                                             </span>
@@ -353,7 +373,7 @@
                                         <div class="flex items-center justify-between">
                                             Tue
                                             <span class="tooltip">Click to Filter Day Status</span>
-                                            <span class="flex items-center space-x-1">
+                                            <span class="flex items-center space-x-1 ml-2"> <!-- Adjusted spacing for better separation -->
                                                 <span class="sort-icon"></span>
                                                 <button class="filter-btn text-neutral-subtle hover:text-accent-dark relative" data-day="Tue" data-column="Tue">
                                                     &#9660;
@@ -361,6 +381,8 @@
                                                         <div class="filter-option" data-filter-value="All">Show All</div>
                                                         <div class="filter-option" data-filter-value="In Office">In Office</div>
                                                         <div class="filter-option" data-filter-value="Telework">Telework</div>
+                                                        <div class="filter-option" data-filter-value="SMT">SMT (A. Puloka)</div>
+                                                        <div class="filter-option" data-filter-value="Triton">Triton (A. Puloka)</div>
                                                     </div>
                                                 </button>
                                             </span>
@@ -370,7 +392,7 @@
                                         <div class="flex items-center justify-between">
                                             Wed
                                             <span class="tooltip">Click to Filter Day Status</span>
-                                            <span class="flex items-center space-x-1">
+                                            <span class="flex items-center space-x-1 ml-2"> <!-- Adjusted spacing for better separation -->
                                                 <span class="sort-icon"></span>
                                                 <button class="filter-btn text-neutral-subtle hover:text-accent-dark relative" data-day="Wed" data-column="Wed">
                                                     &#9660;
@@ -378,6 +400,8 @@
                                                         <div class="filter-option" data-filter-value="All">Show All</div>
                                                         <div class="filter-option" data-filter-value="In Office">In Office</div>
                                                         <div class="filter-option" data-filter-value="Telework">Telework</div>
+                                                        <div class="filter-option" data-filter-value="SMT">SMT (A. Puloka)</div>
+                                                        <div class="filter-option" data-filter-value="Triton">Triton (A. Puloka)</div>
                                                     </div>
                                                 </button>
                                             </span>
@@ -387,7 +411,7 @@
                                         <div class="flex items-center justify-between">
                                             Thu
                                             <span class="tooltip">Click to Filter Day Status</span>
-                                            <span class="flex items-center space-x-1">
+                                            <span class="flex items-center space-x-1 ml-2"> <!-- Adjusted spacing for better separation -->
                                                 <span class="sort-icon"></span>
                                                 <button class="filter-btn text-neutral-subtle hover:text-accent-dark relative" data-day="Thu" data-column="Thu">
                                                     &#9660;
@@ -395,6 +419,8 @@
                                                         <div class="filter-option" data-filter-value="All">Show All</div>
                                                         <div class="filter-option" data-filter-value="In Office">In Office</div>
                                                         <div class="filter-option" data-filter-value="Telework">Telework</div>
+                                                        <div class="filter-option" data-filter-value="SMT">SMT (A. Puloka)</div>
+                                                        <div class="filter-option" data-filter-value="Triton">Triton (A. Puloka)</div>
                                                     </div>
                                                 </button>
                                             </span>
@@ -404,7 +430,7 @@
                                         <div class="flex items-center justify-between">
                                             Fri
                                             <span class="tooltip">Click to Filter Day Status</span>
-                                            <span class="flex items-center space-x-1">
+                                            <span class="flex items-center space-x-1 ml-2"> <!-- Adjusted spacing for better separation -->
                                                 <span class="sort-icon"></span>
                                                 <button class="filter-btn text-neutral-subtle hover:text-accent-dark relative" data-day="Fri" data-column="Fri">
                                                     &#9660;
@@ -412,6 +438,8 @@
                                                         <div class="filter-option" data-filter-value="All">Show All</div>
                                                         <div class="filter-option" data-filter-value="In Office">In Office</div>
                                                         <div class="filter-option" data-filter-value="Telework">Telework</div>
+                                                        <div class="filter-option" data-filter-value="SMT">SMT (A. Puloka)</div>
+                                                        <div class="filter-option" data-filter-value="Triton">Triton (A. Puloka)</div>
                                                     </div>
                                                 </button>
                                             </span>
@@ -431,11 +459,7 @@
         <section id="roles" class="mb-16 scroll-mt-20">
             <div class="flex justify-between items-center mb-4">
                  <h2 class="text-3xl font-bold text-neutral-text">Team Functions</h2>
-                <div class="save-btn-container">
-                    <button id="saveRolesBtn" onclick="saveAllEditableContent(this)" class="bg-accent-dark hover:bg-accent-base text-white font-semibold py-1.5 px-3 rounded-md shadow-md transition duration-150 ease-in-out text-sm hidden">
-                        Save Changes
-                    </button>
-                </div>
+                <!-- REMOVED save button container -->
             </div>
             <p class="text-lg text-neutral-subtle mb-8">
                 Discover the specific responsibilities for each administrative role. The original plan's matrix is broken down here for clarity. Click a role below to see a detailed list of their assigned functions and tasks.
@@ -455,14 +479,11 @@
                         Add New Item
                         <span class="tooltip">Add a blank, editable row</span>
                     </button>
-                    <button id="saveTrainingBtn" onclick="saveAllEditableContent(this)" class="bg-accent-dark hover:bg-accent-base text-white font-semibold py-1.5 px-3 rounded-md shadow-md transition duration-150 ease-in-out text-sm hidden">
-                        Save Changes
-                        <span class="tooltip">Save edits to browser storage</span>
-                    </button>
+                    <!-- REMOVED saveTrainingBtn (Using global save) -->
                 </div>
             </div>
             <p class="text-lg text-neutral-subtle mb-8">
-                This section outlines the "Skill-Building Toolkit" designed to foster operational continuity and cross-training. The table below details all necessary training topics, their descriptions, assigned training contacts, and target completion dates. **You can edit any cell and click "Save Changes" to store the updates locally.**
+                This section outlines the "Skill-Building Toolkit" designed to foster operational continuity and cross-training. The table below details all necessary training topics, their descriptions, assigned training contacts, and target completion dates. **You can edit any cell and click "Save All Changes" in the navigation bar to store the updates locally.**
             </p>
             
             <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-x-auto">
@@ -582,12 +603,12 @@
                 tasks: [
                     { area: "Frontline and Customer Support", task: "Staff main phone lines; process mail; route faxes; receive, route, and respond to inquiries from internal and external stakeholders." },
                     { area: "Records and Data Management", task: "File, scan, archive, and distribute records following City retention policies." },
-                    { area: "Scheduling and Coordination", task: "Track team calendar coverage; set up room reservations and meeting logistics." },
+                    { area: "Scheduling and Coordination", task: "Track team calendar coverage; booking meeting spaces, and managing logistics. Tasks include preparing and printing agendas, assembling meeting materials, and ensuring organizational readiness for all scheduled events." },
                     { area: "Financial Processing and Procurement", task: "Collect receipts and documentation; deliver coding support for invoices." },
-                    { area: "Reporting and Tracking", task: "Enter and update tracking logs (mail, deliveries, timesheet submissions)." },
+                    { area: "Reporting and Tracking", task: "Enter and update tracking logs (mail, deliveries, archive logs)." },
                     { area: "Fleet and Facilities", task: "Assist with vehicle reservations and key coordination." },
                     { area: "Technology and SharePoint", task: "Maintain document library order and accessibility." },
-                    { area: "Special Projects and Strategic Initiatives", task: "Support event coordination and divisional recognition activities." }
+                    { area: "Special Projects and Strategic Initiatives", task: "Support event coordination and divisional recognition activities. Provide backup coverage for office aid tasks as needed, and help with the creation and testing of Standard Operating Procedures to support continuous process improvements." }
                 ]
             },
             admin2: {
@@ -595,19 +616,19 @@
                 tasks: [
                     { area: "Onboarding and Offboarding Support", task: "Coordinate onboarding and offboarding processes for new and exiting staff: submit IT and facilities tickets, assist with seat assignments and workspace setup, ensure equipment distribution and collection, and provide orientation support as needed." },
                     { area: "Records and Data Management", task: "Maintain and verify case management data in systems (CMC, Barcode, CARE, GetCare). Prepare data reports for leadership decision-making." },
-                    { area: "Scheduling and Coordination", task: "Coordinate meetings for management teams and ensure agenda, presentation, and materials preparation." },
-                    { area: "Financial Processing and Procurement", task: "Process accounts payable, monitor credit card use, verify invoice coding, and track budget expenditures." },
+                    { area: "Scheduling and Coordination", task: "Coordinate meetings for management teams and ensure agenda, presentation, and materials preparation. Provide note-taking support during meetings and distribution of meeting minutes and supporting documents." },
+                    { area: "Financial Processing and Procurement", task: "Process accounts payable, monitor credit card use, verify invoice coding, and track budget expenditures. Support travel arrangements, meal and refreshment purchases, and other procurement activities to support division operations." },
                     { area: "Reporting and Tracking", task: "Create and maintain detailed tracking systems for program metrics, caseload reporting, and administrative processes." },
                     { area: "Fleet and Facilities", task: "Handle divisional property and space coordination, work orders, and vendor requests." },
                     { area: "Technology", task: "Support staff with computer and laptop setup, troubleshooting, and equipment check-out; collaborate with IT for system issue escalation." },
-                    { area: "Special Projects and Strategic Initiatives", task: "Lead documentation and progress reporting for special administrative initiatives and citywide process improvements." }
+                    { area: "Special Projects and Strategic Initiatives", task: "Lead documentation and progress reporting for special administrative initiatives and citywide process improvements. Provide backup support for office aid, AS I, and AS III tasks as needed, and contribute to the development and testing of Standard Operating Procedures." }
                 ]
             },
             supervisor: {
                 name: "Admin Support Supervisor",
                 tasks: [
-                    { area: "Team Leadership & Guidance", task: "Supervise, coach, and support administrative staff, lead collaboration, communicate expectations, resolve escalations" },
-                    { area: "Operations & Resource Management", task: "Oversee office equipment, supplies, fleet vehicles, ensure workspace setup, procurement, vendor coordination" },
+                    { area: "Team Leadership & Guidance", task: "Supervise, coach, and support administrative staff, lead collaboration, communicate expectations, resolve escalations. Actively train team members, promote skill development, and encourage continuous learning. Coordinate and direct administrative team to provide comprehensive support for division operations, events, and training initiatives." },
+                    { area: "Operations & Resource Management", task: "Oversee office equipment, supplies, fleet vehicles, ensure workspace setup, procurement, vendor coordination. Manage facility operations by communicating building updates, monitoring safety protocols, and serving as the point of contact for facility-related issues." },
                     { area: "Process Improvement & Reporting", task: "Develop and refine processes, ensure consistency, compile, review, and track metrics and compliance reports" },
                     { area: "Technology & Systems Oversight", task: "Serve as SharePoint/IT lead, approve access, coordinate onboarding/offboarding technology needs" },
                     { area: "Project & Initiative Leadership", task: "Lead special projects and divisional support initiatives, drive emergency preparedness, cross-training, and best practices" },
@@ -628,9 +649,8 @@
                 name: "Office Aid",
                 tasks: [
                     { area: "Frontline & Customer Support", task: "Support with incoming and outbound mail." },
-                    { area: "Supplies", task: "Organize and restock office and supply closets daily." },
+                    { area: "Supplies", task: "Organize and restock office and supply closets daily. Load and refill printer/copier paper and supplies daily to ensure readiness." },
                     { area: "Scheduling & Coordination", task: "Prep conference rooms each morning; Manage and update conference room calendars to reflect current bookings." },
-                    { area: "Financial/Procurement", task: "Load and refill printer/copier paper and supplies daily to ensure readiness." },
                     { area: "Reporting & Tracking", task: "Update in-office signage, such as directional or event notices, as needed." },
                     { area: "Special Projects/Initiatives", task: "Event admin duties" }
                 ]
@@ -682,7 +702,7 @@
         
         let rosterTableBody, rosterTitle, btnSeattle, btnSkc, roleTabsContainer, roleContentContainer, saveTrainingBtn, addTrainingBtn;
         // Declare modal elements (will be assigned in DOMContentLoaded)
-        let deleteModal, undoBtn, redoBtn;
+        let deleteModal, undoBtn, redoBtn, globalSaveBtn; // Added globalSaveBtn
         
         // --- UTILITY FUNCTIONS ---
 
@@ -691,10 +711,15 @@
          * We use JSON stringify/parse for a deep clone to ensure separation.
          */
         function getCurrentAppState() {
+            // Need to extract current state from DOM for truly edited content
+            const currentGoals = getEditableGoalsFromDOM();
+            const currentOverview = document.getElementById('overviewDescription')?.textContent.trim() || '';
+            const currentGoalsIntro = document.getElementById('goalsIntroduction')?.textContent.trim() || '';
+            
             return {
-                overviewDescription: document.getElementById('overviewDescription')?.textContent.trim() || '',
-                goalsIntroduction: document.getElementById('goalsIntroduction')?.textContent.trim() || '',
-                strategicGoals: JSON.parse(JSON.stringify(strategicGoals)),
+                overviewDescription: currentOverview,
+                goalsIntroduction: currentGoalsIntro,
+                strategicGoals: currentGoals, // Use the extracted DOM state
                 functionalData: JSON.parse(JSON.stringify(functionalData)),
                 teamData: JSON.parse(JSON.stringify(teamData)),
                 trainingData: JSON.parse(JSON.stringify(trainingData))
@@ -739,15 +764,19 @@
             teamData = state.teamData;
             trainingData = state.trainingData;
 
-            // Rerender all components based on new state
+            // Re-render all components based on new state
             renderStrategicGoals();
             updateCoverageSection();
-            renderRoleContent(roleTabsContainer.querySelector('.role-tab.active')?.dataset.role || 'officeAid');
+            // Re-render the active role content if a tab is active
+            const activeRole = roleTabsContainer?.querySelector('.role-tab.active')?.dataset.role || 'officeAid';
+            renderRoleContent(activeRole);
             renderTrainingTable();
             
-            // Mark all save buttons as dirty since undo/redo is a change that hasn't been persisted to Local Storage
+            // Mark state as dirty and show global save button
             isDirty = true;
-            document.querySelectorAll('button[onclick^="saveAllEditableContent"]').forEach(btn => btn.classList.remove('hidden'));
+            if (globalSaveBtn) globalSaveBtn.classList.remove('hidden');
+
+            updateUndoRedoButtons();
         }
 
         /**
@@ -762,7 +791,6 @@
                 // Apply the previous state (now the new last item on the undo stack)
                 const previousState = undoStack[undoStack.length - 1];
                 applyState(previousState);
-                updateUndoRedoButtons();
             }
         }
 
@@ -775,7 +803,6 @@
                 const nextState = redoStack.pop();
                 undoStack.push(nextState);
                 applyState(nextState);
-                updateUndoRedoButtons();
             }
         }
 
@@ -793,22 +820,19 @@
         }
 
         /**
-         * Finds the closest save button for a changed element and makes it visible.
+         * Shows the global save button when content is changed.
          * Sets the global isDirty flag to true and pushes state to stack.
          * @param {HTMLElement} element The editable element that triggered the change.
          */
         function markAsChanged(element) {
             isDirty = true;
-            const section = element.closest('section');
-            if (section) {
-                // Find the save button within that section's header/container
-                const saveButton = section.querySelector('button[onclick^="saveAllEditableContent"]');
-                if (saveButton) {
-                    saveButton.classList.remove('hidden');
-                }
+            if (globalSaveBtn) {
+                globalSaveBtn.classList.remove('hidden');
             }
+            
             // Debounce state push to avoid stacking multiple intermediate states while typing rapidly
             clearTimeout(window.pushStateTimeout);
+            // Push the state *before* the current change is saved, as the change itself is what triggered the push
             window.pushStateTimeout = setTimeout(pushStateToUndoStack, 300);
         }
 
@@ -820,8 +844,10 @@
                 const titleElement = li.querySelector('[data-goal-key="title"]');
                 const descriptionElement = li.querySelector('[data-goal-key="description"]');
                 if (titleElement && descriptionElement) {
+                    // Try to get the original ID if available, otherwise just use a placeholder
+                    const id = parseInt(li.dataset.goalId, 10) || 0; 
                     goals.push({
-                        id: parseInt(li.dataset.goalId),
+                        id: id,
                         title: titleElement.textContent.trim(),
                         description: descriptionElement.textContent.trim()
                     });
@@ -882,7 +908,8 @@
                 Object.keys(functionalData).forEach(key => {
                     if (storedFunctions[key]) {
                         functionalData[key].name = storedFunctions[key].name;
-                        functionalData[key].tasks = storedFunctions[key].tasks;
+                        // Deep clone tasks
+                        functionalData[key].tasks = storedFunctions[key].tasks.map(task => ({ ...task }));
                     }
                 });
             }
@@ -892,6 +919,7 @@
             if (storedTraining) {
                 trainingData = storedTraining.map(item => ({
                     ...item,
+                    // Ensure 'resources' is present, defaulting if needed
                     resources: item.resources || 'N/A' 
                 }));
             }
@@ -899,13 +927,13 @@
             // 6. Roster Data (teamData)
             const storedTeamData = loadGeneralData('teamData');
             if (storedTeamData) {
-                // IMPORTANT: Since teamData structure is complex, ensure a deep merge or replacement is safe.
-                // For simplicity and structure preservation, we'll replace the inner data arrays.
+                // Ensure a safe replacement or merge for the team roster data
                 if (storedTeamData.seattle) {
-                    teamData.seattle = storedTeamData.seattle;
+                    // Deep clone the roster array to avoid reference issues
+                    teamData.seattle = storedTeamData.seattle.map(item => ({...item, schedule: [...item.schedule]}));
                 }
                 if (storedTeamData.skc) {
-                    teamData.skc = storedTeamData.skc;
+                    teamData.skc = storedTeamData.skc.map(item => ({...item, schedule: [...item.schedule]}));
                 }
             }
             
@@ -935,11 +963,16 @@
             saveGeneralData('functionalData', functionalData);
 
             // 5. Save Training Data
-            const dataToSave = trainingData.map(({ originalIndex, ...rest }) => rest);
-            saveGeneralData('trainingData', dataToSave);
+            // We save the global trainingData object directly as it is updated in real-time by edits/adds/deletes
+            saveGeneralData('trainingData', trainingData);
             
-            // 6. Save Roster Data (teamData)
-            saveGeneralData('teamData', teamData);
+            // 6. Save Roster Data (teamData object should be up-to-date via handleRosterEdit)
+            // Ensure originalIndex is stripped before saving for a cleaner structure
+            const teamDataToSave = {
+                seattle: teamData.seattle.map(({ originalIndex, ...rest }) => rest),
+                skc: teamData.skc.map(({ originalIndex, ...rest }) => rest)
+            };
+            saveGeneralData('teamData', teamDataToSave);
             
             // NEW: Reset dirty state after saving
             isDirty = false;
@@ -976,7 +1009,8 @@
                 `).join('');
                 
                 goalsList.querySelectorAll('[contenteditable="true"]').forEach(el => {
-                    el.addEventListener('blur', handleGoalEdit);
+                    el.removeEventListener('blur', handleGoalEdit); // Remove old listener
+                    el.addEventListener('blur', handleGoalEdit); // Add new listener
                 });
             }
         }
@@ -1002,34 +1036,49 @@
 
         function getUniqueValues(key, team) {
             // Use local/current teamData for unique values in case of edits
-            const sourceData = teamData[team] || [...teamData.seattle, ...teamData.skc];
+            const sourceData = team === 'all' ? [...teamData.seattle, ...teamData.skc] : teamData[team] || [];
             const values = sourceData.map(p => p[key]);
             return [...new Set(values)].filter(val => val !== 'All').sort();
         }
 
         function populateRosterFilterMenus() {
+            // Staff filter should only show staff from the currently selected team
             const staffValues = getUniqueValues('staff', currentTeam);
+            // Position filter should show all positions across both teams
             const posValues = getUniqueValues('pos', 'all'); 
             
-            // Note: Day filters are hardcoded in HTML as they only have 'All', 'In Office', 'Telework'
             const staffMenu = document.querySelector('[data-column-menu="staff"]');
             const posMenu = document.querySelector('[data-column-menu="pos"]');
             
             if (staffMenu) {
                 // Clear and repopulate staff filter options
                  staffMenu.innerHTML = `
-                    <div class="filter-option" data-filter-key="staff" data-filter-value="All">Show All</div>
-                    ${staffValues.map(val => `<div class="filter-option" data-filter-key="staff" data-filter-value="${val}">${val}</div>`).join('')}
+                    <div class="filter-option ${currentStaffFilter === 'All' ? 'active' : ''}" data-filter-key="staff" data-filter-value="All">Show All</div>
+                    ${staffValues.map(val => `<div class="filter-option ${currentStaffFilter === val ? 'active' : ''}" data-filter-key="staff" data-filter-value="${val}">${val}</div>`).join('')}
                 `;
             }
             
             if (posMenu) {
                 // Clear and repopulate position filter options
                 posMenu.innerHTML = `
-                    <div class="filter-option" data-filter-key="pos" data-filter-value="All">Show All</div>
-                    ${posValues.map(val => `<div class="filter-option" data-filter-key="pos" data-filter-value="${val}">${val}</div>`).join('')}
+                    <div class="filter-option ${currentPositionFilter === 'All' ? 'active' : ''}" data-filter-key="pos" data-filter-value="All">Show All</div>
+                    ${posValues.map(val => `<div class="filter-option ${currentPositionFilter === val ? 'active' : ''}" data-filter-key="pos" data-filter-value="${val}">${val}</div>`).join('')}
                 `;
             }
+            
+            // Update day filter menus to include 'SMT' and 'Triton'
+            dayKeys.forEach(day => {
+                const menu = document.querySelector(`[data-column-menu="${day}"]`);
+                if (menu) {
+                    menu.innerHTML = `
+                        <div class="filter-option" data-filter-value="All">Show All</div>
+                        <div class="filter-option" data-filter-value="In Office">In Office</div>
+                        <div class="filter-option" data-filter-value="Telework">Telework</div>
+                        <div class="filter-option" data-filter-value="SMT">SMT (A. Puloka)</div>
+                        <div class="filter-option" data-filter-value="Triton">Triton (A. Puloka)</div>
+                    `;
+                }
+            });
         }
         
         function sortData(data, key, direction) {
@@ -1045,16 +1094,19 @@
                     valA = a[key].toLowerCase();
                     valB = b[key].toLowerCase();
                 } else if (dayIndex !== -1) {
-                    // Sort day columns primarily by In Office/Telework, then secondary sort by staff name
-                    valA = a.schedule[dayIndex] === 'In Office' ? 0 : 1;
-                    valB = b.schedule[dayIndex] === 'In Office' ? 0 : 1;
+                    // Sorting logic for schedule status
+                    const statusOrder = { 'In Office': 0, 'Telework': 1, 'SMT': 2, 'Triton': 3 };
+
+                    valA = statusOrder[a.schedule[dayIndex]] !== undefined ? statusOrder[a.schedule[dayIndex]] : 99;
+                    valB = statusOrder[b.schedule[dayIndex]] !== undefined ? statusOrder[b.schedule[dayIndex]] : 99;
+                    
                     if (valA === valB) {
                         return a.staff.toLowerCase().localeCompare(b.staff.toLowerCase());
                     }
                 } else {
-                    return 0;
+                    return 0; // Should not happen with valid keys
                 }
-
+                
                 let comparison = 0;
                 if (valA > valB) {
                     comparison = 1;
@@ -1070,7 +1122,7 @@
         // New handler for contenteditable cells (staff/position)
         function handleRosterEdit(e) {
             const target = e.target;
-            markAsChanged(target); // Mark changes & push to stack
+            markAsChanged(target); // Mark changes & push to stack (debounced)
             const row = target.closest('tr');
             if (!row) return;
 
@@ -1083,6 +1135,7 @@
 
             if (item && key) {
                 item[key] = newValue;
+                // Re-render to update filter menus and display if needed
                 updateCoverageSection(); 
             }
         }
@@ -1090,7 +1143,7 @@
         // New handler for schedule dropdown change
         function handleScheduleChange(e) {
             const target = e.target;
-            markAsChanged(target); // Mark changes & push to stack
+            markAsChanged(target); // Mark changes & push to stack (debounced)
             const row = target.closest('tr');
             if (!row) return;
 
@@ -1103,21 +1156,43 @@
 
             if (item && item.schedule && item.schedule[dayIndex] !== undefined) {
                 item.schedule[dayIndex] = newValue;
-                updateCoverageSection(); // Re-render to update the visual style of the dropdown/badge colors
+                // Update the color class immediately
+                updateScheduleSelectColor(target, newValue);
+                // No need for full rerender
+            }
+        }
+        
+        function updateScheduleSelectColor(selectElement, status) {
+            selectElement.classList.remove('bg-green-100', 'text-green-800', 'bg-blue-100', 'text-blue-800', 'bg-yellow-100', 'text-yellow-800', 'bg-purple-100', 'text-purple-800');
+            
+            switch (status) {
+                case 'In Office':
+                    selectElement.classList.add('bg-green-100', 'text-green-800');
+                    break;
+                case 'Telework':
+                    selectElement.classList.add('bg-blue-100', 'text-blue-800');
+                    break;
+                case 'SMT':
+                    selectElement.classList.add('bg-yellow-100', 'text-yellow-800');
+                    break;
+                case 'Triton':
+                    selectElement.classList.add('bg-purple-100', 'text-purple-800');
+                    break;
+                default:
+                    // Default color for unknown status
+                    selectElement.classList.add('bg-gray-100', 'text-gray-800');
+                    break;
             }
         }
         
         // Delegated click handler for the roster table body
         function handleRosterTableClick(e) {
-            const row = e.target.closest('tr');
-            if (row && row.dataset.originalIndex) {
-                 // Check if the click was on an editable cell to prevent table sorting
-            }
+            // Currently only handles clicks, blur/change handle edits
         }
         
 
         function updateSortIcons() {
-            document.querySelectorAll('.sortable-header').forEach(header => {
+            document.querySelectorAll('#coverage .sortable-header').forEach(header => {
                 const key = header.dataset.sortKey;
                 const icon = header.querySelector('.sort-icon');
                 header.classList.remove('sorted');
@@ -1151,6 +1226,9 @@
             });
             
             const sortedData = sortData(filteredData, currentSortKey, currentSortDir);
+            
+            // Define all possible schedule statuses including the new ones
+            const scheduleOptions = ['In Office', 'Telework', 'SMT', 'Triton'];
 
             if (rosterTableBody) {
                 if (sortedData.length === 0) {
@@ -1166,19 +1244,36 @@
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div contenteditable="true" data-column="pos" class="text-sm text-neutral-subtle focus:ring-2 focus:ring-accent-dark focus:bg-accent-light rounded px-1 -mx-1">${person.pos}</div>
                         </td>
-                        ${person.schedule.map((status, index) => `
-                            <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                <select onchange="handleScheduleChange(event)" data-day-index="${index}" class="schedule-select ${status === 'In Office' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'}">
-                                    <option value="In Office" ${status === 'In Office' ? 'selected' : ''}>In Office</option>
-                                    <option value="Telework" ${status === 'Telework' ? 'selected' : ''}>Telework</option>
-                                </select>
-                            </td>
-                        `).join('')}
+                        ${person.schedule.map((status, index) => {
+                            // Determine the initial class based on status
+                            let statusClass = '';
+                            switch (status) {
+                                case 'In Office': statusClass = 'bg-green-100 text-green-800'; break;
+                                case 'Telework': statusClass = 'bg-blue-100', 'text-blue-800'; break;
+                                case 'SMT': statusClass = 'bg-yellow-100', 'text-yellow-800'; break;
+                                case 'Triton': statusClass = 'bg-purple-100', 'text-purple-800'; break;
+                                default: statusClass = 'bg-gray-100', 'text-gray-800'; break;
+                            }
+                            
+                            // Generate options, selecting the current status
+                            const optionsHtml = scheduleOptions.map(option => `
+                                <option value="${option}" ${status === option ? 'selected' : ''}>${option}</option>
+                            `).join('');
+
+                            return `
+                                <td class="px-6 py-4 whitespace-nowrap text-sm">
+                                    <select onchange="handleScheduleChange(event)" data-day-index="${index}" class="schedule-select ${statusClass}">
+                                        ${optionsHtml}
+                                    </select>
+                                </td>
+                            `;
+                        }).join('')}
                     </tr>
                 `).join('');
                 
-                // Add blur listener for the contenteditable cells
+                // Add blur listener for the contenteditable cells (need to remove/add to prevent multiple listeners)
                 rosterTableBody.querySelectorAll('[contenteditable="true"]').forEach(cell => {
+                    cell.removeEventListener('blur', handleRosterEdit); 
                     cell.addEventListener('blur', handleRosterEdit);
                 });
             }
@@ -1188,7 +1283,7 @@
         }
         
         function updateCoverageSection() {
-            // Re-map to ensure original index is always present for sorting
+            // Re-map to ensure original index is always present for stable sorting
             const data = teamData[currentTeam].map((item, index) => ({...item, originalIndex: index})); 
             renderRosterTable(data);
             
@@ -1196,8 +1291,27 @@
             if (btnSeattle) btnSeattle.classList.toggle('active', currentTeam === 'seattle');
             if (btnSkc) btnSkc.classList.toggle('active', currentTeam === 'skc');
 
-            // Need to repopulate menus every time the team changes to reflect staff
+            // Need to repopulate menus every time the team changes to reflect staff/positions
             populateRosterFilterMenus();
+            updateAllHeaderFilterStatus();
+        }
+
+        /**
+         * Clears all filters applied to the Coverage Dashboard (Staff, Position, and all Days).
+         */
+        function clearCoverageFilters() {
+            currentPositionFilter = 'All'; 
+            currentStaffFilter = 'All'; 
+            currentSortKey = 'staff'; // Reset sorting
+            currentSortDir = 'asc';
+            currentDayFilters = { 'Mon': 'All', 'Tue': 'All', 'Wed': 'All', 'Thu': 'All', 'Fri': 'All' };
+            
+            // Re-render the UI to reflect the cleared filters
+            updateCoverageSection();
+
+            // The filter menus need to be visually reset and repopulated since staff/position options change based on team
+            populateRosterFilterMenus();
+            updateAllHeaderFilterStatus();
         }
         
         function handleSortClick(e) {
@@ -1205,7 +1319,7 @@
             if (!header) return;
 
             // Prevent sort if clicking the filter button inside the header
-            if (e.target.closest('.filter-btn')) {
+            if (e.target.closest('.filter-btn') || e.target.closest('.filter-menu')) {
                 return; 
             }
 
@@ -1229,7 +1343,7 @@
             header.dataset.sortDir = direction;
             
             // Reset other headers' sort direction to 'none' if they aren't the current key
-            document.querySelectorAll('.sortable-header').forEach(h => {
+            document.querySelectorAll('#coverage .sortable-header').forEach(h => {
                 if (h !== header) {
                     h.dataset.sortDir = 'none';
                 }
@@ -1273,6 +1387,34 @@
                     filterBtn.classList.remove('text-accent-dark');
                 }
             });
+             document.querySelectorAll('#training .training-sortable-header').forEach(header => {
+                const column = header.dataset.sortKey;
+                const filterBtn = header.querySelector('.filter-btn');
+                if (!filterBtn) return;
+                
+                const menu = header.querySelector('.filter-menu');
+                let currentValue = currentTrainingFilters[column] || 'All';
+                
+                if (filterBtn) {
+                    if (currentValue !== 'All') {
+                        filterBtn.classList.add('text-accent-dark');
+                    } else {
+                        filterBtn.classList.remove('text-accent-dark');
+                    }
+                }
+                
+                // Set active class on filter options
+                if (menu) {
+                    menu.querySelectorAll('.filter-option').forEach(option => {
+                        option.classList.remove('active');
+                    });
+
+                    const activeOption = menu.querySelector(`[data-filter-value="${currentValue}"]`);
+                    if(activeOption) {
+                        activeOption.classList.add('active');
+                    }
+                }
+            });
         }
         
         function initCoverage() {
@@ -1283,12 +1425,14 @@
             
             // Add original index to data for stable sorting
             Object.keys(teamData).forEach(team => {
+                // Ensure data has originalIndex (necessary after loading from localStorage which strips it)
                 teamData[team] = teamData[team].map((item, index) => ({...item, originalIndex: index}));
             });
 
             if (btnSeattle) {
                 btnSeattle.addEventListener('click', () => {
                     currentTeam = 'seattle';
+                    // Reset filters when switching teams for simplicity
                     currentPositionFilter = 'All';
                     currentStaffFilter = 'All';
                     currentSortKey = 'staff';
@@ -1304,18 +1448,23 @@
                     currentStaffFilter = 'All';
                     currentSortKey = 'staff';
                     currentSortDir = 'asc';
-                    currentDayFilters = { 'Mon': 'All', 'Tue': 'All', 'Wed': 'All', 'Thu': 'All', 'Fri': 'All' };
+                    currentDayFilters = { 'Mon': 'All', 'Tue': 'All', 'Wed': 'All', 'Thu': 'All', 'Fri': 'Fri' };
                     updateCoverageSection();
                 });
             }
             
-            const tableHead = document.querySelector('#coverage table thead');
+            const tableHead = document.querySelector('#coverage table pread');
             if (tableHead) {
                 tableHead.addEventListener('click', handleSortClick);
+                 // Add filter toggle listeners to headers
+                document.querySelectorAll('#coverage .filter-btn').forEach(button => {
+                    button.removeEventListener('click', toggleFilterMenu);
+                    button.addEventListener('click', toggleFilterMenu);
+                });
             }
             
-            // Roster Table Body listener for edit delegation (currently only handles blur/change events on rendered elements)
             if (rosterTableBody) {
+                rosterTableBody.removeEventListener('click', handleRosterTableClick);
                 rosterTableBody.addEventListener('click', handleRosterTableClick);
             }
             
@@ -1327,7 +1476,7 @@
         
         function handleRoleEdit(e) {
             const target = e.target;
-            markAsChanged(target); // Mark changes & push to stack
+            markAsChanged(target); // Mark changes & push to stack (debounced)
             const container = target.closest('[data-task-index]');
             if (!container) return;
 
@@ -1363,6 +1512,7 @@
             
             // Attach new blur listeners for the editable content
             roleContentContainer.querySelectorAll('[contenteditable="true"]').forEach(el => {
+                 el.removeEventListener('blur', handleRoleEdit); // Remove old listener
                  el.addEventListener('blur', handleRoleEdit);
             });
 
@@ -1372,7 +1522,7 @@
         }
         
         function initRoles() {
-            let currentRole = 'officeAid';
+            let currentRole = roleTabsContainer?.querySelector('.role-tab.active')?.dataset.role || 'officeAid';
             
             roleTabsContainer = document.getElementById('roleTabs');
             roleContentContainer = document.getElementById('roleContent');
@@ -1383,7 +1533,7 @@
             if (roleTabsContainer) {
                  roleTabsContainer.innerHTML = roleOrder.map(key => {
                     const role = functionalData[key];
-                    // Set 'officeAid' as initial active tab
+                    // Set 'officeAid' as initial active tab if no active tab found during load
                     return `
                         <button class="role-tab py-2 px-4 border rounded-md text-sm font-semibold ${key === currentRole ? 'active' : ''} has-tooltip" data-role="${key}">
                             ${role.name}
@@ -1433,7 +1583,7 @@
         
         function handleTrainingEdit(e) {
             const target = e.target;
-            markAsChanged(target); // Mark changes & push to stack
+            markAsChanged(target); // Mark changes & push to stack (debounced)
             const row = target.closest('tr');
             if (!row) return;
 
@@ -1447,7 +1597,7 @@
                 // Note: The index here must be the index within the *original* trainingData array, not the filtered/rendered index
                 if (trainingData[actualIndex]) {
                     trainingData[actualIndex][columnKey] = newValue;
-                    // Re-render to update potential filter menus immediately
+                    // Re-render to update potential filter menus (e.g., if a new contact name is added)
                     renderTrainingTable();
                 }
             }
@@ -1489,12 +1639,9 @@
                 // Re-render
                 renderTrainingTable();
                 
-                // Mark the save button as changed so user knows to persist the deletion
-                const saveButton = document.getElementById('saveTrainingBtn');
-                if (saveButton) saveButton.classList.remove('hidden');
-                
-                // Mark state as dirty (deletion is a change)
+                // Mark state as dirty and show global save button
                 isDirty = true;
+                if (globalSaveBtn) globalSaveBtn.classList.remove('hidden');
             }
         }
         
@@ -1514,9 +1661,9 @@
             
             renderTrainingTable(); 
             
-            // Mark state as dirty and auto-save the change
-            const saveButton = document.getElementById('saveTrainingBtn');
-            saveAllEditableContent(saveButton);
+            // Mark state as dirty and show save button
+            isDirty = true;
+            if (globalSaveBtn) globalSaveBtn.classList.remove('hidden');
         }
         
         function renderTrainingTable() {
@@ -1541,7 +1688,6 @@
                     // Find the original index for accurate editing/deletion
                     const originalIndex = trainingData.indexOf(item);
                     
-                    // NOTE: Removed inline onclick, replaced with data attribute for event delegation
                     return `
                         <tr data-index="${originalIndex}" class="hover:bg-gray-50 transition-colors">
                             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-neutral-text">
@@ -1570,44 +1716,15 @@
                 }).join('');
                 
                 tableBody.querySelectorAll('[contenteditable="true"]').forEach(cell => {
+                    cell.removeEventListener('blur', handleTrainingEdit);
                     cell.addEventListener('blur', handleTrainingEdit);
                 });
             }
 
             populateTrainingFilterMenus();
-            updateTrainingHeaderFilterStatus();
+            updateAllHeaderFilterStatus(); // Calls the combined function
         }
 
-        function updateTrainingHeaderFilterStatus() {
-             document.querySelectorAll('#training .training-sortable-header').forEach(header => {
-                const column = header.dataset.sortKey;
-                const filterBtn = header.querySelector('.filter-btn');
-                if (!filterBtn) return;
-                
-                const menu = header.querySelector('.filter-menu');
-                let currentValue = currentTrainingFilters[column] || 'All';
-                
-                if (filterBtn) {
-                    if (currentValue !== 'All') {
-                        filterBtn.classList.add('text-accent-dark');
-                    } else {
-                        filterBtn.classList.remove('text-accent-dark');
-                    }
-                }
-                
-                // Set active class on filter options
-                if (menu) {
-                    menu.querySelectorAll('.filter-option').forEach(option => {
-                        option.classList.remove('active');
-                    });
-
-                    const activeOption = menu.querySelector(`[data-filter-value="${currentValue}"]`);
-                    if(activeOption) {
-                        activeOption.classList.add('active');
-                    }
-                }
-            });
-        }
 
         // New delegated handler for clicks on the Training table body
         function handleTrainingTableClick(e) {
@@ -1624,19 +1741,22 @@
         }
 
         function initTraining() {
-            // Updated to be simpler, relies on document.getElementById
             const trainingTableBody = document.getElementById('trainingTableBody'); 
             
             const tableHead = document.querySelector('#training table thead');
             if (tableHead) {
-                 tableHead.addEventListener('click', toggleFilterMenu);
+                // Remove/Add to prevent duplicates
+                tableHead.removeEventListener('click', toggleFilterMenu);
+                tableHead.addEventListener('click', toggleFilterMenu);
             }
             
-            // ATTACH DELEGATED LISTENER HERE
+            // ATTACH DELEGATED LISTENER FOR DELETION
             if (trainingTableBody) {
+                trainingTableBody.removeEventListener('click', handleTrainingTableClick);
                 trainingTableBody.addEventListener('click', handleTrainingTableClick);
             }
             
+            document.getElementById('addTrainingBtn').removeEventListener('click', addNewTrainingItem);
             document.getElementById('addTrainingBtn').addEventListener('click', addNewTrainingItem);
 
             renderTrainingTable();
@@ -1750,7 +1870,8 @@
         
         // --- MAIN INIT ---
         document.addEventListener('DOMContentLoaded', () => {
-            // CRITICAL: Get Undo/Redo button references
+            // CRITICAL: Get global button references
+            globalSaveBtn = document.getElementById('globalSaveBtn'); // NEW: Get global save button
             undoBtn = document.getElementById('undoBtn');
             redoBtn = document.getElementById('redoBtn');
             // CRITICAL FIX: Initialize deleteModal here so it is available to the deleteTrainingItem function immediately.
@@ -1761,13 +1882,12 @@
             
             // Initialize global filter listeners once
             document.querySelectorAll('.filter-menu').forEach(menu => {
+                menu.removeEventListener('click', handleFilterSelection);
                 menu.addEventListener('click', handleFilterSelection);
             });
 
             // Add blur listener for ALL editable content to trigger the save button visibility
-            document.querySelectorAll('[contenteditable="true"]').forEach(el => {
-                el.addEventListener('blur', (e) => markAsChanged(e.target));
-            });
+            // Note: Individual sections (Goals, Roster, Roles, Training) manage their specific blur/edit listeners to update their data models
             
             // Initialize event listeners for goals section edits
             renderStrategicGoals();
@@ -1807,7 +1927,14 @@
                     cancelDelete();
                 }
             });
+            
+            // Initial call to set active nav link based on scroll position (may be overridden by observer)
+            initNav(); 
         });
+        
+        // Expose clearCoverageFilters to global scope for onclick in HTML
+        window.clearCoverageFilters = clearCoverageFilters;
     </script>
 </body>
 </html>
+
