@@ -760,6 +760,7 @@
 
             // Apply object state
             strategicGoals = state.strategicGoals;
+            // CRITICAL FIX: Ensure functionalData is correctly set from the state stack
             functionalData = state.functionalData;
             teamData = state.teamData;
             trainingData = state.trainingData;
@@ -878,6 +879,84 @@
                 }
             }
         }
+
+        // Utility to reset functional data to defaults and clear localStorage
+        function resetFunctionalData() {
+            // Define the default structure to reset to
+            const defaultFunctionalData = {
+                admin1: {
+                    name: "Admin Specialist I",
+                    tasks: [
+                        { area: "Frontline and Customer Support", task: "Staff main phone lines; process mail; route faxes; receive, route, and respond to inquiries from internal and external stakeholders." },
+                        { area: "Records and Data Management", task: "File, scan, archive, and distribute records following City retention policies." },
+                        { area: "Scheduling and Coordination", task: "Track team calendar coverage; booking meeting spaces, and managing logistics. Tasks include preparing and printing agendas, assembling meeting materials, and ensuring organizational readiness for all scheduled events." },
+                        { area: "Financial Processing and Procurement", task: "Collect receipts and documentation; deliver coding support for invoices." },
+                        { area: "Reporting and Tracking", task: "Enter and update tracking logs (mail, deliveries, archive logs)." },
+                        { area: "Fleet and Facilities", task: "Assist with vehicle reservations and key coordination." },
+                        { area: "Technology and SharePoint", task: "Maintain document library order and accessibility." },
+                        { area: "Special Projects and Strategic Initiatives", task: "Support event coordination and divisional recognition activities. Provide backup coverage for office aid tasks as needed, and help with the creation and testing of Standard Operating Procedures to support continuous process improvements." }
+                    ]
+                },
+                admin2: {
+                    name: "Admin Specialist II",
+                    tasks: [
+                        { area: "Onboarding and Offboarding Support", task: "Coordinate onboarding and offboarding processes for new and exiting staff: submit IT and facilities tickets, assist with seat assignments and workspace setup, ensure equipment distribution and collection, and provide orientation support as needed." },
+                        { area: "Records and Data Management", task: "Maintain and verify case management data in systems (CMC, Barcode, CARE, GetCare). Prepare data reports for leadership decision-making." },
+                        { area: "Scheduling and Coordination", task: "Coordinate meetings for management teams and ensure agenda, presentation, and materials preparation. Provide note-taking support during meetings and distribution of meeting minutes and supporting documents." },
+                        { area: "Financial Processing and Procurement", task: "Process accounts payable, monitor credit card use, verify invoice coding, and track budget expenditures. Support travel arrangements, meal and refreshment purchases, and other procurement activities to support division operations." },
+                        { area: "Reporting and Tracking", task: "Create and maintain detailed tracking systems for program metrics, caseload reporting, and administrative processes." },
+                        { area: "Fleet and Facilities", task: "Handle divisional property and space coordination, work orders, and vendor requests." },
+                        { area: "Technology", task: "Support staff with computer and laptop setup, troubleshooting, and equipment check-out; collaborate with IT for system issue escalation." },
+                        { area: "Special Projects and Strategic Initiatives", task: "Lead documentation and progress reporting for special administrative initiatives and citywide process improvements. Provide backup support for office aid, AS I, and AS III tasks as needed, and contribute to the development and testing of Standard Operating Procedures." }
+                    ]
+                },
+                supervisor: {
+                    name: "Admin Support Supervisor",
+                    tasks: [
+                        { area: "Team Leadership & Guidance", task: "Supervise, coach, and support administrative staff, lead collaboration, communicate expectations, resolve escalations. Actively train team members, promote skill development, and encourage continuous learning. Coordinate and direct administrative team to provide comprehensive support for division operations, events, and training initiatives." },
+                        { area: "Operations & Resource Management", task: "Oversee office equipment, supplies, fleet vehicles, ensure workspace setup, procurement, vendor coordination. Manage facility operations by communicating building updates, monitoring safety protocols, and serving as the point of contact for facility-related issues." },
+                        { area: "Process Improvement & Reporting", task: "Develop and refine processes, ensure consistency, compile, review, and track metrics and compliance reports" },
+                        { area: "Technology & Systems Oversight", task: "Serve as SharePoint/IT lead, approve access, coordinate onboarding/offboarding technology needs" },
+                        { area: "Project & Initiative Leadership", task: "Lead special projects and divisional support initiatives, drive emergency preparedness, cross-training, and best practices" },
+                        { area: "Financial/Procurement", task: "Purchase oversight" },
+                    ]
+                },
+                acctTech: {
+                    name: "Accounting Tech II",
+                    tasks: [
+                        { area: "Accounts Payable Processing", task: "Accurately review, code, and process all divisional invoices, manage accounts payable emails and attachments, resolve discrepancies." },
+                        { area: "Financial Documentation & Compliance", task: "Prepare and authorize expenditure documentation, audit, file, and reconcile records in compliance with city policies." },
+                        { area: "Invoice & Records Management", task: "Track invoices, client orders, and payments in Excel, SharePoint." },
+                        { area: "Reporting & Tracking", task: "Monthly/quarterly reports" },
+                        { area: "Teamwork & Collaboration", task: "Serve as backup for other admin support staff" }
+                    ]
+                },
+                officeAid: {
+                    name: "Office Aid",
+                    tasks: [
+                        { area: "Frontline & Customer Support", task: "Support with incoming and outbound mail." },
+                        { area: "Supplies", task: "Organize and restock office and supply closets daily. Load and refill printer/copier paper and supplies daily to ensure readiness." },
+                        { area: "Scheduling & Coordination", task: "Prep conference rooms each morning; Manage and update conference room calendars to reflect current bookings." },
+                        { area: "Reporting and Tracking", task: "Update in-office signage, such as directional or event notices, as needed." },
+                        { area: "Special Projects/Initiatives", task: "Event admin duties" }
+                    ]
+                }
+            };
+
+            // 1. Clear Local Storage for functional data
+            if (typeof localStorage !== 'undefined') {
+                localStorage.removeItem('functionalData');
+            }
+
+            // 2. Overwrite the in-memory data with the current hardcoded defaults
+            functionalData = JSON.parse(JSON.stringify(defaultFunctionalData));
+
+            // 3. Re-render the UI (SAFELY)
+            if (roleTabsContainer && roleContentContainer) {
+                const activeRole = roleTabsContainer.querySelector('.role-tab.active')?.dataset.role || 'officeAid';
+                renderRoleContent(activeRole);
+            }
+        }
         
         function loadEditableContent() {
             // 1. Overview Text
@@ -898,22 +977,13 @@
             const storedGoals = loadGeneralData('strategicGoals');
             if (storedGoals) {
                  strategicGoals = storedGoals;
-                 renderStrategicGoals();
+                 // NOTE: renderStrategicGoals will run later in init
             }
 
-            // 4. Team Functions
-            const storedFunctions = loadGeneralData('functionalData');
-            if (storedFunctions) {
-                // Merge loaded data into the structure, ensuring keys are preserved
-                Object.keys(functionalData).forEach(key => {
-                    if (storedFunctions[key]) {
-                        functionalData[key].name = storedFunctions[key].name;
-                        // Deep clone tasks
-                        functionalData[key].tasks = storedFunctions[key].tasks.map(task => ({ ...task }));
-                    }
-                });
-            }
-
+            // 4. Team Functions - FORCING DEFAULT LOAD ONCE
+            // Load the default functionalData and clear localStorage override for this specific file version
+            resetFunctionalData();
+            
             // 5. Training Data
             const storedTraining = loadGeneralData('trainingData');
             if (storedTraining) {
@@ -1495,20 +1565,28 @@
         }
 
         function renderRoleContent(roleKey) {
+            // CRITICAL FIX: Ensure elements exist before trying to query them
+            if (!roleContentContainer) return; 
+            
             const role = functionalData[roleKey];
-            if (roleContentContainer) {
-                 roleContentContainer.innerHTML = `
-                    <h3 class="text-xl font-semibold text-accent-dark mb-6">${role.name} Responsibilities</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
-                        ${role.tasks.map((item, index) => `
-                            <div class="border-l-4 border-accent-base pl-4 py-1" data-task-index="${index}">
-                                <h4 class="font-semibold text-neutral-text" contenteditable="true" data-content-key="area">${item.area}</h4>
-                                <p class="text-neutral-subtle" contenteditable="true" data-content-key="task">${item.task}</p>
-                            </div>
-                        `).join('')}
-                    </div>
-                `;
+            
+            // Check if the role data actually exists before rendering
+            if (!role) {
+                roleContentContainer.innerHTML = '<p class="text-red-500">Error: Role data not found.</p>';
+                return;
             }
+
+            roleContentContainer.innerHTML = `
+                <h3 class="text-xl font-semibold text-accent-dark mb-6">${role.name} Responsibilities</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                    ${role.tasks.map((item, index) => `
+                        <div class="border-l-4 border-accent-base pl-4 py-1" data-task-index="${index}">
+                            <h4 class="font-semibold text-neutral-text" contenteditable="true" data-content-key="area">${item.area}</h4>
+                            <p class="text-neutral-subtle" contenteditable="true" data-content-key="task">${item.task}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
             
             // Attach new blur listeners for the editable content
             roleContentContainer.querySelectorAll('[contenteditable="true"]').forEach(el => {
@@ -1516,16 +1594,21 @@
                  el.addEventListener('blur', handleRoleEdit);
             });
 
-            document.querySelectorAll('#roleTabs button').forEach(tab => {
-                tab.classList.toggle('active', tab.dataset.role === roleKey);
-            });
+            // CRITICAL FIX: Check if roleTabsContainer is available before querying
+            if (roleTabsContainer) {
+                 document.querySelectorAll('#roleTabs button').forEach(tab => {
+                    tab.classList.toggle('active', tab.dataset.role === roleKey);
+                });
+            }
         }
         
         function initRoles() {
-            let currentRole = roleTabsContainer?.querySelector('.role-tab.active')?.dataset.role || 'officeAid';
-            
+            // Assign DOM elements to global variables first
             roleTabsContainer = document.getElementById('roleTabs');
             roleContentContainer = document.getElementById('roleContent');
+            
+            // Determine the starting role
+            let currentRole = roleTabsContainer?.querySelector('.role-tab.active')?.dataset.role || 'officeAid';
 
             // Define display order for clarity
             const roleOrder = ['officeAid', 'admin1', 'admin2', 'acctTech', 'supervisor'];
@@ -1937,4 +2020,3 @@
     </script>
 </body>
 </html>
-
