@@ -202,13 +202,13 @@
                     </div>
                     <!-- Global Save, Undo/Redo Controls -->
                     <div class="ml-4 flex space-x-2 border-l pl-4 items-center">
-                        <!-- Reset All Data Button -->
-                        <button id="resetAllDataBtn" onclick="showResetModal()" class="bg-red-400 hover:bg-red-500 text-white font-semibold py-1.5 px-3 rounded-md shadow-md transition duration-150 ease-in-out text-sm has-tooltip">
+                        <!-- Reset All Data Button - Hidden by default -->
+                        <button id="resetAllDataBtn" onclick="showResetModal()" class="bg-red-400 hover:bg-red-500 text-white font-semibold py-1.5 px-3 rounded-md shadow-md transition duration-150 ease-in-out text-sm hidden has-tooltip">
                             &#8634; Reset All Data
                             <span class="tooltip">Clear all saved edits (Local Storage)</span>
                         </button>
                         
-                        <!-- NEW GLOBAL SAVE BUTTON -->
+                        <!-- NEW GLOBAL SAVE BUTTON - Hidden by default -->
                         <button id="globalSaveBtn" onclick="saveAllEditableContent(this)" class="bg-accent-dark hover:bg-accent-base text-white font-semibold py-1.5 px-3 rounded-md shadow-md transition duration-150 ease-in-out text-sm hidden has-tooltip">
                             Save All Changes
                             <span class="tooltip">Save all edits to browser storage</span>
@@ -708,7 +708,7 @@
         
         let rosterTableBody, rosterTitle, btnSeattle, btnSkc, roleTabsContainer, roleContentContainer, saveTrainingBtn, addTrainingBtn;
         // Declare modal elements (will be assigned in DOMContentLoaded)
-        let deleteModal, undoBtn, redoBtn, globalSaveBtn; // Added globalSaveBtn
+        let deleteModal, undoBtn, redoBtn, globalSaveBtn, resetAllDataBtn; // Added resetAllDataBtn
         
         // --- UTILITY FUNCTIONS ---
 
@@ -782,6 +782,7 @@
             // Mark state as dirty and show global save button
             isDirty = true;
             if (globalSaveBtn) globalSaveBtn.classList.remove('hidden');
+            if (resetAllDataBtn) resetAllDataBtn.classList.remove('hidden'); // Show reset button too
 
             updateUndoRedoButtons();
         }
@@ -827,7 +828,7 @@
         }
 
         /**
-         * Shows the global save button when content is changed.
+         * Shows the global save and reset buttons when content is changed.
          * Sets the global isDirty flag to true and pushes state to stack.
          * @param {HTMLElement} element The editable element that triggered the change.
          */
@@ -835,6 +836,9 @@
             isDirty = true;
             if (globalSaveBtn) {
                 globalSaveBtn.classList.remove('hidden');
+            }
+            if (resetAllDataBtn) {
+                resetAllDataBtn.classList.remove('hidden');
             }
             
             // Debounce state push to avoid stacking multiple intermediate states while typing rapidly
@@ -1124,6 +1128,9 @@
                     saveButton.textContent = originalText;
                     saveButton.classList.remove('bg-green-600', 'hover:bg-green-700');
                     saveButton.classList.add('bg-accent-dark', 'hover:bg-accent-base', 'hidden');
+                    
+                    // Hide reset button when saving completes
+                    if (resetAllDataBtn) resetAllDataBtn.classList.add('hidden');
                 }, 1500);
             }
         }
@@ -1791,6 +1798,7 @@
                 // Mark state as dirty and show global save button
                 isDirty = true;
                 if (globalSaveBtn) globalSaveBtn.classList.remove('hidden');
+                if (resetAllDataBtn) resetAllDataBtn.classList.remove('hidden');
             }
         }
         
@@ -1813,6 +1821,7 @@
             // Mark state as dirty and show save button
             isDirty = true;
             if (globalSaveBtn) globalSaveBtn.classList.remove('hidden');
+            if (resetAllDataBtn) resetAllDataBtn.classList.remove('hidden');
         }
         
         function renderTrainingTable() {
@@ -2021,6 +2030,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             // CRITICAL: Get global button references
             globalSaveBtn = document.getElementById('globalSaveBtn'); // NEW: Get global save button
+            resetAllDataBtn = document.getElementById('resetAllDataBtn'); // Get global reset button
             undoBtn = document.getElementById('undoBtn');
             redoBtn = document.getElementById('redoBtn');
             // CRITICAL FIX: Initialize deleteModal here so it is available to the deleteTrainingItem function immediately.
