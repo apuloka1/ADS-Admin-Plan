@@ -202,6 +202,12 @@
                     </div>
                     <!-- Global Save, Undo/Redo Controls -->
                     <div class="ml-4 flex space-x-2 border-l pl-4 items-center">
+                        <!-- Reset All Data Button -->
+                        <button id="resetAllDataBtn" onclick="showResetModal()" class="bg-red-400 hover:bg-red-500 text-white font-semibold py-1.5 px-3 rounded-md shadow-md transition duration-150 ease-in-out text-sm has-tooltip">
+                            &#8634; Reset All Data
+                            <span class="tooltip">Clear all saved edits (Local Storage)</span>
+                        </button>
+                        
                         <!-- NEW GLOBAL SAVE BUTTON -->
                         <button id="globalSaveBtn" onclick="saveAllEditableContent(this)" class="bg-accent-dark hover:bg-accent-base text-white font-semibold py-1.5 px-3 rounded-md shadow-md transition duration-150 ease-in-out text-sm hidden has-tooltip">
                             Save All Changes
@@ -880,6 +886,66 @@
             }
         }
 
+        /**
+         * Resets the entire application state (all sections: goals, team, functional, training)
+         * to the hardcoded defaults in the current file and clears all local storage.
+         */
+        function resetAllLocalData() {
+            // 1. Clear all Local Storage keys used for persistence
+            if (typeof localStorage !== 'undefined') {
+                localStorage.removeItem('overviewDescription');
+                localStorage.removeItem('goalsIntroduction');
+                localStorage.removeItem('strategicGoals');
+                localStorage.removeItem('functionalData');
+                localStorage.removeItem('teamData');
+                localStorage.removeItem('trainingData');
+            }
+
+            // 2. Force a full page reload. This causes the app to reinitialize, 
+            // loading the hardcoded defaults from the script.
+            window.location.reload(); 
+        }
+
+        function showResetModal() {
+            // Reusing the deleteModal logic for a generic confirmation
+            const modal = document.getElementById('deleteModal');
+            const header = modal.querySelector('h3');
+            const message = modal.querySelector('p');
+            const confirmBtn = document.getElementById('confirmDeleteBtn');
+            const cancelBtn = document.getElementById('cancelDeleteBtn');
+
+            header.textContent = 'Confirm Data Reset';
+            header.classList.remove('text-red-600');
+            header.classList.add('text-orange-600');
+            
+            message.innerHTML = 'Are you sure you want to **clear ALL saved edits**? The dashboard will reload and revert to the version stored in your code file.';
+            
+            confirmBtn.textContent = 'Yes, Reset All';
+            confirmBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+            confirmBtn.classList.add('bg-orange-600', 'hover:bg-orange-700');
+            confirmBtn.onclick = resetAllLocalData; 
+
+            cancelBtn.onclick = hideResetModal;
+
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function hideResetModal() {
+             const modal = document.getElementById('deleteModal');
+             const header = modal.querySelector('h3');
+             const confirmBtn = document.getElementById('confirmDeleteBtn');
+             
+             // Restore delete modal styles/text just in case (though it will be overwritten before delete is used)
+             header.classList.remove('text-orange-600');
+             header.classList.add('text-red-600');
+             confirmBtn.classList.remove('bg-orange-600', 'hover:bg-orange-700');
+             confirmBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+             
+             modal.classList.remove('flex');
+             modal.classList.add('hidden');
+        }
+        
         // Utility to reset functional data to defaults and clear localStorage
         function resetFunctionalData() {
             // Define the default structure to reset to
@@ -980,8 +1046,8 @@
                  // NOTE: renderStrategicGoals will run later in init
             }
 
-            // 4. Team Functions - FORCING DEFAULT LOAD ONCE
-            // Load the default functionalData and clear localStorage override for this specific file version
+            // 4. Team Functions - FORCING DEFAULT LOAD ONCE (to ensure latest file changes are visible)
+            // This is primarily to fix the issue where users see old data in the canvas/site after editing the hardcoded data.
             resetFunctionalData();
             
             // 5. Training Data
@@ -2007,7 +2073,12 @@
                 const modalContent = deleteModal ? deleteModal.querySelector('.bg-white') : null;
                 // Only attempt to close if the modal is currently visible
                 if (deleteModal && deleteModal.classList.contains('flex') && modalContent && !modalContent.contains(e.target)) {
-                    cancelDelete();
+                    // Check if it's the specific reset modal state
+                    if (document.getElementById('confirmDeleteBtn').onclick === resetAllLocalData) {
+                         hideResetModal();
+                    } else {
+                        cancelDelete(); // Default delete cancel action
+                    }
                 }
             });
             
@@ -2015,8 +2086,11 @@
             initNav(); 
         });
         
-        // Expose clearCoverageFilters to global scope for onclick in HTML
+        // Expose functions to global scope for onclick in HTML
         window.clearCoverageFilters = clearCoverageFilters;
+        window.showResetModal = showResetModal; // Expose the new reset function
+        window.resetAllLocalData = resetAllLocalData; // Expose the core reset function
+        window.hideResetModal = hideResetModal;
     </script>
 </body>
 </html>
